@@ -32,17 +32,16 @@ void jogador_mostrar_status(const Jogador *j) {
         "Salão do Trono","Masmorra","Mercado",
         "Muralhas","Biblioteca","Jardins","Vila"
     };
-    printf("\n========== STATUS DO REI %s ==========\n", j->nome);
-    printf("  Vida:         %3d / 100\n", j->vida);
+    printf("\nSTATUS DO REI %s\n", j->nome);
+    printf("  Vida:         %d de 100\n", j->vida);
     printf("  Ouro:         %d moedas\n",  j->ouro);
-    printf("  Exército:     %3d / 100\n", j->exercito);
-    printf("  Popularidade: %3d / 100\n", j->popularidade);
-    printf("  Sabedoria:    %3d / 100\n", j->sabedoria);
+    printf("  Exercito:     %d de 100\n", j->exercito);
+    printf("  Popularidade: %d de 100\n", j->popularidade);
+    printf("  Sabedoria:    %d de 100\n", j->sabedoria);
     printf("  Local atual:  %s\n",
         (j->local_atual >= 0 && j->local_atual < LOCAL_TOTAL)
         ? locais[j->local_atual] : "Desconhecido");
-    printf("  Turno:        %d\n", j->turno);
-    printf("==========================================\n");
+    printf("  Turno:        %d\n\n", j->turno);
     if (g_audio_ativado) {
         char resumo[512];
         snprintf(resumo, sizeof(resumo),

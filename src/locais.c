@@ -223,7 +223,7 @@ static void processar_muralhas(const char *cmd) {
     if (n==1 || !strcmp(cmd,"inspecionar") || !strcmp(cmd,"defesas")) {
         char buf[64];
         snprintf(buf, sizeof(buf), "Relatório das defesas. Exército: %d de cem.", g_jogador.exercito);
-        printf("\n[Relatório das Defesas]\n  Exército: %d/100\n", g_jogador.exercito);
+        printf("\nRelatorio das Defesas. Exercito: %d de 100.\n", g_jogador.exercito);
         tts_speak(buf);
         if (g_jogador.exercito < 40)
             ui_narrar("As muralhas são sólidas, mas os soldados são poucos e mal treinados. Uma invasão seria difícil de repelir agora.");
@@ -480,7 +480,7 @@ static void processar_vila(const char *cmd) {
     } else if ((n==4 || !strcmp(cmd,"lider")) && g_jogador.povo_ajudado) {
         ui_narrar("O líder da vila, o ancião Bertold, fala em voz baixa: \"Majestade, se o senhor precisar de nós, basta chamar. Não somos soldados, mas somos Avalon. Lutaremos por este reino até o fim.\"");
         if (g_jogador.popularidade >= 75)
-            ui_msg("  >> Popularidade alta! Opção especial disponível no Salão do Trono: Convocar o Povo.");
+            ui_msg("Popularidade alta! Opcao especial disponivel no Salao do Trono: Convocar o Povo.");
         g_jogador.turno++;
 
     } else if (n==9 || !strcmp(cmd,"voltar") || !strcmp(cmd,"trono")) {

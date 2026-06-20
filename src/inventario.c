@@ -46,7 +46,7 @@ int inventario_adicionar(Inventario *inv, TipoItem tipo) {
     it->tipo = tipo;
     strncpy(it->nome,      item_get_nome(tipo),      NOME_MAX - 1);
     strncpy(it->descricao, item_get_descricao(tipo),  DESC_MAX - 1);
-    printf("  >> Item obtido: %s\n", it->nome);
+    printf("Item obtido: %s\n", it->nome);
     return 1;
 }
 
@@ -69,15 +69,14 @@ int inventario_tem(const Inventario *inv, TipoItem tipo) {
 }
 
 void inventario_mostrar(const Inventario *inv) {
-    printf("\n=== INVENTÁRIO (%d/%d) ===\n", inv->quantidade, MAX_ITENS);
+    printf("\nINVENTARIO %d de %d itens:\n", inv->quantidade, MAX_ITENS);
     if (inv->quantidade == 0) {
-        printf("  (vazio)\n");
+        printf("  vazio\n");
     } else {
         for (int i = 0; i < inv->quantidade; i++)
             printf("  %d. %s\n", i + 1, inv->itens[i].nome);
     }
-    printf("  Use 'examinar' para ver a descrição dos itens.\n");
-    printf("=========================\n");
+    printf("  Use examinar para ver a descricao dos itens.\n\n");
     if (g_audio_ativado) {
         char resumo[512] = "Inventário: ";
         if (inv->quantidade == 0) {
@@ -100,10 +99,10 @@ void inventario_examinar_todos(const Inventario *inv) {
         printf("Seu inventário está vazio.\n");
         return;
     }
-    printf("\n=== EXAMINANDO INVENTÁRIO ===\n");
+    printf("\nExaminando inventario:\n");
     for (int i = 0; i < inv->quantidade; i++) {
-        printf("\n[%d] %s\n", i + 1, inv->itens[i].nome);
-        printf("    %s\n", inv->itens[i].descricao);
+        printf("\n%d. %s\n", i + 1, inv->itens[i].nome);
+        printf("   %s\n", inv->itens[i].descricao);
     }
-    printf("=============================\n");
+    printf("\n");
 }

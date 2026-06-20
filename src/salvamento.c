@@ -11,7 +11,7 @@ extern int g_audio_ativado;
 int salvar_jogo(const Jogador *j, const Inventario *inv) {
     _mkdir("saves");
     FILE *f = fopen(SAVE_FILE, "w");
-    if (!f) { printf("[!] Erro ao abrir arquivo de salvamento.\n"); return 0; }
+    if (!f) { printf("Erro ao abrir arquivo de salvamento.\n"); return 0; }
 
     fprintf(f, "NOME=%s\n",                    j->nome);
     fprintf(f, "VIDA=%d\n",                    j->vida);
@@ -45,7 +45,7 @@ int salvar_jogo(const Jogador *j, const Inventario *inv) {
 int carregar_jogo(Jogador *j, Inventario *inv) {
     FILE *f = fopen(SAVE_FILE, "r");
     if (!f) {
-        printf("[!] Nenhum arquivo de salvamento encontrado em '%s'.\n", SAVE_FILE);
+        printf("Nenhum arquivo de salvamento encontrado.\n");
         return 0;
     }
     memset(j, 0, sizeof(Jogador));

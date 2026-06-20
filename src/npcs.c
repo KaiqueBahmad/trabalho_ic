@@ -86,7 +86,7 @@ void npc_general(Jogador *j, Inventario *inv) {
     if (!strcmp(cmd,"1")) {
         char buf[128];
         snprintf(buf, sizeof(buf), "Força atual do exército: %d de cem.", j->exercito);
-        printf("\n[Relatório do General Marcus]\n  Força atual do exército: %d/100\n", j->exercito);
+        printf("\nRelatorio do General Marcus. Forca atual do exercito: %d de 100.\n", j->exercito);
         tts_speak(buf);
         if (j->exercito < 40)
             ui_narrar("\"Majestade, nossa situação é preocupante. Precisamos de mais recrutas e treinamento urgente.\"");
@@ -193,7 +193,7 @@ void npc_prisioneiro(Jogador *j, Inventario *inv) {
         j->erik_falou_aldric = 1;
         j->traidor_revelado  = 1;
         ui_narrar("Erik se aproxima das grades com urgência. \"Lord Aldric é um espião de Drakmar! Foi ele quem me interceptou e me prendeu para impedir a paz. Ele quer a guerra porque o Rei Malachar o paga para enfraquecer Avalon por dentro!\"");
-        ui_msg("  >> O traidor foi revelado! Agora você pode confrontar Lord Aldric.");
+        ui_msg("O traidor foi revelado! Agora voce pode confrontar Lord Aldric.");
     } else if ((!strcmp(cmd,"4") || strstr(cmd,"libertar")) && inventario_tem(inv, ITEM_CHAVE_MASMORRA)) {
         if (!j->traidor_revelado) {
             j->traidor_revelado  = 1;
@@ -203,7 +203,7 @@ void npc_prisioneiro(Jogador *j, Inventario *inv) {
         inventario_remover(inv, ITEM_CHAVE_MASMORRA);
         j->prisioneiro_libertado = 1;
         ui_narrar("A fechadura cede com um clique. Erik sai da cela e se ajoelha. \"Obrigado, Majestade. Posso agora atuar como intermediário para a paz com Drakmar. A Rainha Serafina ficará satisfeita.\"");
-        ui_msg("  >> Erik foi libertado! Novo caminho disponível: negociar paz com Drakmar.");
+        ui_msg("Erik foi libertado! Novo caminho disponivel: negociar paz com Drakmar.");
     } else if (!strcmp(cmd,"4") || !strcmp(cmd,"5")) {
         if (!strcmp(cmd,"4") && !inventario_tem(inv, ITEM_CHAVE_MASMORRA))
             ui_msg("Você não tem a chave para abrir a cela.");

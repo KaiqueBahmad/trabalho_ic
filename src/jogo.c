@@ -195,12 +195,10 @@ static void carregar_e_continuar(void) {
 }
 
 static void perguntar_audio(void) {
-    printf("\n==================================================\n");
-    printf("  NARRAÇÃO POR VOZ\n");
-    printf("==================================================\n");
-    printf("Deseja ativar a narração por voz?\n");
-    printf("  1 - Sim, ativar narração\n");
-    printf("  2 - Não, jogar sem áudio\n");
+    printf("\nNARRACAO POR VOZ\n\n");
+    printf("Deseja ativar a narracao por voz?\n");
+    printf("  1 - Sim, ativar narracao\n");
+    printf("  2 - Nao, jogar sem audio\n");
     printf("\n> ");
     fflush(stdout);
     char buf[16];
@@ -218,8 +216,8 @@ static void perguntar_audio(void) {
 void jogo_iniciar(void) {
     if (!audio_disponivel()) {
         g_audio_ativado = 0;
-        printf("[Áudio] Arquivos do piper não encontrados. Narração por voz desativada.\n");
-        printf("[Áudio] O jogo funcionará normalmente sem áudio.\n\n");
+        printf("Arquivos de audio nao encontrados. Narracao por voz desativada.\n");
+        printf("O jogo funcionara normalmente sem audio.\n\n");
     } else {
         perguntar_audio();
     }
