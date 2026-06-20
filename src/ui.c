@@ -76,11 +76,11 @@ void ui_repetir(void) {
 void ui_ajuda(void) {
     const char *texto =
         "Comandos disponíveis a qualquer momento: "
-        "menos um, status, inventario, examinar, repetir, opcoes, salvar, audio, sair. "
+        "ajuda, status, inventario, examinar, repetir, opcoes, salvar, audio, sair. "
         "Você pode digitar o número ou o nome da ação. "
         "Maiúsculas, acentos e espaços extras são aceitos.";
     printf("\nAJUDA - Comandos disponíveis a qualquer momento:\n\n");
-    printf("  -1         - Exibe esta lista de comandos\n");
+    printf("  ajuda      - Exibe esta lista de comandos\n");
     printf("  status     - Mostra os atributos do rei\n");
     printf("  inventario - Lista os itens que voce possui\n");
     printf("  examinar   - Examina os itens do inventario\n");
@@ -99,6 +99,6 @@ void ui_opcoes_globais(void) {
         printf("\nOpcoes disponiveis:\n%s", ultimas_opcoes_display);
         if (g_audio_ativado) tts_speak(ultimas_opcoes_fala);
     } else {
-        ui_msg("Use -1 para ver os comandos disponíveis.");
+        ui_msg("Use ajuda para ver os comandos disponíveis.");
     }
 }
