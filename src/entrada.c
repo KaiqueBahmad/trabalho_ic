@@ -40,7 +40,8 @@ static void remover_acentos(char *s) {
 }
 
 void entrada_ler(char *buf, int size) {
-    Beep(880, 80);
+    extern int g_audio_ativado;
+    if (g_audio_ativado) Beep(880, 80);
     printf("> ");
     fflush(stdout);
     if (!fgets(buf, size, stdin)) { buf[0] = '\0'; return; }
