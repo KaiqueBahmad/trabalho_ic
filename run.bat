@@ -1,5 +1,5 @@
 @echo off
-gcc main.c audio/audio.c src/jogador.c src/inventario.c src/entrada.c src/ui.c src/salvamento.c src/npcs.c src/locais.c src/jogo.c -I. -o main.exe -lwinmm
+gcc main.c audio/audio.c src/jogador.c src/inventario.c src/entrada.c src/ui.c src/salvamento.c src/npcs.c src/locais.c src/jogo.c src/utils.c -I. -o main.exe -lwinmm
 if %errorlevel% neq 0 (
     echo Erro na compilacao.
     exit /b %errorlevel%
