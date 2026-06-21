@@ -16,7 +16,7 @@ static int audio_disponivel(void) {
     FILE *f = fopen("piper/piper.exe", "rb");
     if (!f) return 0;
     fclose(f);
-    f = fopen("piper/pt_BR-faber-medium.onnx", "rb");
+    f = fopen("models/pt_BR-faber-medium.onnx", "rb");
     if (!f) return 0;
     fclose(f);
     return 1;

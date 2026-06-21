@@ -20,8 +20,8 @@ void tts_speak(const char *text) {
 
     char cmd[8192];
     snprintf(cmd, sizeof(cmd),
-        "cd piper && piper.exe --model \"%s\" --length_scale 0.8 --output_file \"..\\%s\" < \"..\\piper_in.txt\" >nul 2>nul",
-        "pt_BR-faber-medium.onnx", TEMP_WAV);
+        "cd piper && piper.exe --model \"..\\models\\pt_BR-faber-medium.onnx\" --length_scale 0.8 --output_file \"..\\%s\" < \"..\\piper_in.txt\" >nul 2>nul",
+        TEMP_WAV);
 
     int ret = system(cmd);
     DeleteFileA("piper_in.txt");
