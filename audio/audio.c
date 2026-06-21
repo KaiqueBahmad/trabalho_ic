@@ -1,16 +1,31 @@
 #include "audio.h"
-
 #include <stdio.h>
 #include <stdlib.h>
-#include <windows.h>
-#include <mmsystem.h>
 #include <string.h>
 
+#ifdef _WIN32
+#include <windows.h>
+#include <mmsystem.h>
 #pragma comment(lib, "winmm.lib")
+#endif
 
-#define PIPER_EXE  "piper\\piper.exe"
-#define PIPER_MODEL "piper\\pt_BR-faber-medium.onnx"
-#define TEMP_WAV   "piper_out.wav"
+#define TEMP_WAV    "piper_out.wav"
+#define PIPER_MODEL "models/pt_BR-faber-medium.onnx"
+
+static void play_wav(const char *path) {
+#ifdef _WIN32
+    PlaySoundA(path, NULL, SND_FILENAME | SND_SYNC);
+#elif defined(__APPLE__)
+    char cmd[512];
+    snprintf(cmd, sizeof(cmd), "afplay '%s' 2>/dev/null", path);
+    system(cmd);
+#else
+    char cmd[512];
+    snprintf(cmd, sizeof(cmd),
+        "aplay '%s' 2>/dev/null || paplay '%s' 2>/dev/null", path, path);
+    system(cmd);
+#endif
+}
 
 void tts_speak(const char *text) {
     FILE *f = fopen("piper_in.txt", "w");
@@ -19,18 +34,27 @@ void tts_speak(const char *text) {
     fclose(f);
 
     char cmd[8192];
+
+#ifdef _WIN32
     snprintf(cmd, sizeof(cmd),
-        "cd piper && piper.exe --model \"..\\models\\pt_BR-faber-medium.onnx\" --length_scale 0.8 --output_file \"..\\%s\" < \"..\\piper_in.txt\" >nul 2>nul",
-        TEMP_WAV);
+        "cd piper && piper.exe --model \"..\\%s\" --length_scale 0.8"
+        " --output_file \"..\\%s\" < \"..\\piper_in.txt\" >nul 2>nul",
+        PIPER_MODEL, TEMP_WAV);
+#else
+    snprintf(cmd, sizeof(cmd),
+        "cd piper && ./piper --model '../%s' --length_scale 0.8"
+        " --output_file '../%s' < '../piper_in.txt' >/dev/null 2>&1",
+        PIPER_MODEL, TEMP_WAV);
+#endif
 
     int ret = system(cmd);
-    DeleteFileA("piper_in.txt");
+    remove("piper_in.txt");
 
     if (ret != 0) {
-        fprintf(stderr, "Erro ao executar piper (código %d)\n", ret);
+        fprintf(stderr, "Erro ao executar piper\n");
         return;
     }
 
-    PlaySoundA(TEMP_WAV, NULL, SND_FILENAME | SND_SYNC);
-    DeleteFileA(TEMP_WAV);
+    play_wav(TEMP_WAV);
+    remove(TEMP_WAV);
 }

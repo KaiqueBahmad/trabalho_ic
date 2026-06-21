@@ -2,14 +2,23 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#ifdef _WIN32
 #include <direct.h>
+#include <sys/stat.h>
+#else
+#include <sys/stat.h>
+#endif
 
 extern int g_audio_ativado;
 
 #define SAVE_FILE "saves/save.txt"
 
 int salvar_jogo(const Jogador *j, const Inventario *inv) {
+#ifdef _WIN32
     _mkdir("saves");
+#else
+    mkdir("saves", 0755);
+#endif
     FILE *f = fopen(SAVE_FILE, "w");
     if (!f) { printf("Erro ao abrir arquivo de salvamento.\n"); return 0; }
 

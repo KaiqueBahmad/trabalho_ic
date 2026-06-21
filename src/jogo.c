@@ -13,7 +13,11 @@ Inventario g_inventario;
 int        g_audio_ativado = 1;
 
 static int audio_disponivel(void) {
+#ifdef _WIN32
     FILE *f = fopen("piper/piper.exe", "rb");
+#else
+    FILE *f = fopen("piper/piper", "rb");
+#endif
     if (!f) return 0;
     fclose(f);
     f = fopen("models/pt_BR-faber-medium.onnx", "rb");

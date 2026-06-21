@@ -4,7 +4,9 @@
 #include <string.h>
 #include <ctype.h>
 #include <stdlib.h>
+#ifdef _WIN32
 #include <windows.h>
+#endif
 
 static void remover_acentos(char *s) {
     unsigned char *p = (unsigned char *)s;
@@ -41,7 +43,9 @@ static void remover_acentos(char *s) {
 
 void entrada_ler(char *buf, int size) {
     extern int g_audio_ativado;
+#ifdef _WIN32
     if (g_audio_ativado) Beep(880, 80);
+#endif
     printf("> ");
     fflush(stdout);
     if (!fgets(buf, size, stdin)) { buf[0] = '\0'; if (feof(stdin)) exit(0); return; }
