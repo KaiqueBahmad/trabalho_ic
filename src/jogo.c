@@ -94,7 +94,7 @@ static void mostrar_final(void) {
             ui_msg("Fim de jogo.");
     }
     printf("\nObrigado por jogar O Peso da Coroa!\n");
-    printf("Turno final: %d | Ouro: %d | Exército: %d | Popularidade: %d\n",
+    printf("Turno final: %d. Ouro: %d. Exercito: %d. Popularidade: %d.\n",
         g_jogador.turno, g_jogador.ouro, g_jogador.exercito, g_jogador.popularidade);
     ui_separador();
 }

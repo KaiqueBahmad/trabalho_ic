@@ -56,11 +56,11 @@ void npc_conselheiro(Jogador *j, Inventario *inv) {
     } else if (!strcmp(cmd,"2")) {
         ui_narrar("Aldric pisca nervosamente. \"Ah, aquele? Um espião de Drakmar, sem dúvida. Ignorem-no. Qualquer coisa que diga é mentira para desestabilizar nosso reino.\"");
         if (!j->prisioneiro_libertado)
-            ui_msg("(Algo no comportamento do conselheiro parece suspeito...)");
+            ui_msg("Algo no comportamento do conselheiro parece suspeito.");
     } else if (!strcmp(cmd,"3")) {
         ui_narrar("\"Alianças? Nenhum reino nos apoiaria agora. Nossa única opção é a força militar. O Reino de Veira é fraco e o de Solheim é distante demais.\"");
         if (!j->info_reino_veira)
-            ui_msg("(Interessante... ele mencionou o Reino de Veira.)");
+            ui_msg("Interessante. Ele mencionou o Reino de Veira.");
     } else {
         ui_msg("Você dispensa o conselheiro.");
     }
@@ -87,7 +87,7 @@ void npc_general(Jogador *j, Inventario *inv) {
         char buf[128];
         snprintf(buf, sizeof(buf), "Força atual do exército: %d de cem.", j->exercito);
         printf("\nRelatorio do General Marcus. Forca atual do exercito: %d de 100.\n", j->exercito);
-        tts_speak(buf);
+        if (g_audio_ativado) tts_speak(buf);
         if (j->exercito < 40)
             ui_narrar("\"Majestade, nossa situação é preocupante. Precisamos de mais recrutas e treinamento urgente.\"");
         else if (j->exercito < 70)
@@ -185,7 +185,7 @@ void npc_prisioneiro(Jogador *j, Inventario *inv) {
 
     if (!strcmp(cmd,"1")) {
         ui_narrar("\"Meu nome é Erik, emissário secreto da Rainha Serafina de Drakmar. Ela me enviou para propor uma paz duradoura entre nossos reinos. Mas fui interceptado e preso antes de chegar ao senhor.\"");
-        ui_msg("(Ele parece sincero. Seus olhos revelam determinação, não malícia.)");
+        ui_msg("Ele parece sincero. Seus olhos revelam determinação, não malícia.");
     } else if (!strcmp(cmd,"2")) {
         ui_narrar("\"O Rei Malachar é belicoso, é verdade. Mas a Rainha Serafina tem influência sobre ele. Ela acredita que uma guerra destruiria ambos os reinos. Eu carregava uma carta dela propondo comércio e paz.\"");
         jogador_alterar_sabedoria(j, 5);

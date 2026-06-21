@@ -142,8 +142,18 @@ static void processar_masmorra(const char *cmd) {
         && !g_jogador.prisioneiro_libertado) {
         npc_prisioneiro(&g_jogador, &g_inventario);
 
-    } else if ((n==2 || !strcmp(cmd,"libertar")) && inventario_tem(&g_inventario, ITEM_CHAVE_MASMORRA)) {
-        npc_prisioneiro(&g_jogador, &g_inventario);
+    } else if ((n==2 || !strcmp(cmd,"libertar")) && inventario_tem(&g_inventario, ITEM_CHAVE_MASMORRA)
+               && !g_jogador.prisioneiro_libertado) {
+        if (!g_jogador.traidor_revelado) {
+            g_jogador.traidor_revelado  = 1;
+            g_jogador.erik_falou_aldric = 1;
+            ui_narrar("Antes de sair, Erik agarra sua mão. \"Majestade, preciso que saiba: Lord Aldric é um traidor, pago por Drakmar para impedir a paz!\"");
+        }
+        inventario_remover(&g_inventario, ITEM_CHAVE_MASMORRA);
+        g_jogador.prisioneiro_libertado = 1;
+        g_jogador.turno++;
+        ui_narrar("A fechadura cede com um clique. Erik sai da cela e se ajoelha. \"Obrigado, Majestade. Posso agora atuar como intermediário para a paz com Drakmar. A Rainha Serafina ficará satisfeita.\"");
+        ui_msg("Erik foi libertado! Novo caminho disponivel: negociar paz com Drakmar.");
 
     } else if (n==9 || !strcmp(cmd,"voltar") || !strcmp(cmd,"trono")) {
         g_jogador.local_atual = LOCAL_SALA_TRONO;
@@ -224,7 +234,7 @@ static void processar_muralhas(const char *cmd) {
         char buf[64];
         snprintf(buf, sizeof(buf), "Relatório das defesas. Exército: %d de cem.", g_jogador.exercito);
         printf("\nRelatorio das Defesas. Exercito: %d de 100.\n", g_jogador.exercito);
-        tts_speak(buf);
+        if (g_audio_ativado) tts_speak(buf);
         if (g_jogador.exercito < 40)
             ui_narrar("As muralhas são sólidas, mas os soldados são poucos e mal treinados. Uma invasão seria difícil de repelir agora.");
         else if (g_jogador.exercito < 70)
@@ -382,7 +392,7 @@ static void processar_jardins(const char *cmd) {
         const char *alianca  = g_jogador.alianca_formada ? "Formada" : "Não estabelecida";
         const char *povo_str = g_jogador.povo_ajudado ? "Leal e grato" :
                                g_jogador.missao_povo_iniciada ? "Necessitando de ajuda" : "Preocupado";
-        printf("\n[Reflexão Real - Turno %d]\n", g_jogador.turno);
+        printf("\nReflexão Real - Turno %d\n", g_jogador.turno);
         printf("  Ameaça de Drakmar: %s\n", drakmar);
         printf("  Prisioneiro na masmorra: %s\n", erik_str);
         printf("  Lord Aldric: %s\n", aldric);

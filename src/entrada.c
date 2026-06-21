@@ -44,7 +44,7 @@ void entrada_ler(char *buf, int size) {
     if (g_audio_ativado) Beep(880, 80);
     printf("> ");
     fflush(stdout);
-    if (!fgets(buf, size, stdin)) { buf[0] = '\0'; return; }
+    if (!fgets(buf, size, stdin)) { buf[0] = '\0'; if (feof(stdin)) exit(0); return; }
     int len = (int)strlen(buf);
     if (len > 0 && buf[len - 1] == '\n') buf[len - 1] = '\0';
 }
