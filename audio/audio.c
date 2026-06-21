@@ -8,8 +8,8 @@
 
 #pragma comment(lib, "winmm.lib")
 
-#define PIPER_EXE  "piper\\piper.exe"
-#define PIPER_MODEL "piper\\pt_BR-faber-medium.onnx"
+#define PIPER_EXE  "piper-windows\\piper.exe"
+#define PIPER_MODEL "piper-windows\\pt_BR-faber-medium.onnx"
 #define TEMP_WAV   "piper_out.wav"
 
 void tts_speak(const char *text) {
@@ -20,7 +20,7 @@ void tts_speak(const char *text) {
 
     char cmd[8192];
     snprintf(cmd, sizeof(cmd),
-        "cd piper && piper.exe --model \"..\\models\\pt_BR-faber-medium.onnx\" --length_scale 0.8 --output_file \"..\\%s\" < \"..\\piper_in.txt\" >nul 2>nul",
+        "cd piper-windows && piper.exe --model \"..\\models\\pt_BR-faber-medium.onnx\" --length_scale 0.8 --output_file \"..\\%s\" < \"..\\piper_in.txt\" >nul 2>nul",
         TEMP_WAV);
 
     int ret = system(cmd);
