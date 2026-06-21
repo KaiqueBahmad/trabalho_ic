@@ -11,17 +11,14 @@ OS=$(uname -s)
 case "$OS" in
     Linux*)
         PIPER_FILE="piper_linux_x86_64.tar.gz"
-        PIPER_DIR="piper-linux"
         COMPILE_FLAGS=""
         ;;
     Darwin*)
         PIPER_FILE="piper_macos_aarch64.tar.gz"
-        PIPER_DIR="piper-macos"
         COMPILE_FLAGS=""
         ;;
     MINGW*|MSYS*|CYGWIN*)
         PIPER_FILE="piper_windows_amd64.zip"
-        PIPER_DIR="piper-windows"
         COMPILE_FLAGS="-lwinmm"
         ;;
     *)
@@ -34,14 +31,14 @@ echo "Sistema detectado: $OS"
 echo ""
 
 # Baixar piper se necessario
-if [ ! -d "$PIPER_DIR" ]; then
+if [ ! -d "piper" ]; then
     echo "Baixando piper ($PIPER_FILE)..."
     if command -v curl > /dev/null 2>&1; then
         curl -L -o "$PIPER_FILE" "$PIPER_BASE_URL/$PIPER_FILE"
     elif command -v wget > /dev/null 2>&1; then
         wget -O "$PIPER_FILE" "$PIPER_BASE_URL/$PIPER_FILE"
     else
-        echo "Erro: curl ou wget nao encontrado. Instale um deles e tente novamente."
+        echo "Erro: curl ou wget nao encontrado."
         exit 1
     fi
 
@@ -51,11 +48,10 @@ if [ ! -d "$PIPER_DIR" ]; then
         *.zip)    unzip -q "$PIPER_FILE" ;;
     esac
 
-    mv piper "$PIPER_DIR"
     rm -f "$PIPER_FILE"
-    echo "Piper instalado em $PIPER_DIR/"
+    echo "Piper instalado em piper/"
 else
-    echo "Piper ja instalado em $PIPER_DIR/"
+    echo "Piper ja instalado em piper/"
 fi
 
 echo ""

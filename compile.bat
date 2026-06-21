@@ -3,12 +3,11 @@ setlocal
 
 set PIPER_URL=https://github.com/rhasspy/piper/releases/download/2023.11.14-2/piper_windows_amd64.zip
 set PIPER_ZIP=piper_windows_amd64.zip
-set PIPER_DIR=piper-windows
 
 echo === O Peso da Coroa - Compilador ===
 echo.
 
-if not exist "%PIPER_DIR%\" (
+if not exist "piper\" (
     echo Baixando piper para Windows...
     curl -L -o "%PIPER_ZIP%" "%PIPER_URL%"
     if errorlevel 1 (
@@ -21,11 +20,10 @@ if not exist "%PIPER_DIR%\" (
         echo Erro ao extrair piper.
         exit /b 1
     )
-    rename piper "%PIPER_DIR%"
     del "%PIPER_ZIP%"
-    echo Piper instalado em %PIPER_DIR%\
+    echo Piper instalado em piper\
 ) else (
-    echo Piper ja instalado em %PIPER_DIR%\
+    echo Piper ja instalado em piper\
 )
 
 echo.
