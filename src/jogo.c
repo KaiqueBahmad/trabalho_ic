@@ -135,6 +135,15 @@ int jogo_processar_global(const char *cmd) {
     if (!strcmp(cmd, "salvar")) {
         salvar_jogo(&g_jogador, &g_inventario); return 1;
     }
+    if (!strcmp(cmd, "carregar")) {
+        if (entrada_confirmar("Carregar jogo salvo? O progresso atual nao salvo sera perdido.")) {
+            jogador_inicializar(&g_jogador, "");
+            inventario_inicializar(&g_inventario);
+            if (carregar_jogo(&g_jogador, &g_inventario))
+                local_mostrar();
+        }
+        return 1;
+    }
     if (!strcmp(cmd, "audio")) {
         g_audio_ativado = !g_audio_ativado;
         printf("Narração por voz: %s\n", g_audio_ativado ? "ATIVADA" : "DESATIVADA");
