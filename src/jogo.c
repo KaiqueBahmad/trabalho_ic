@@ -110,6 +110,12 @@ int jogo_verificar_fim(void) {
         g_jogador.jogo_encerrado = 1;
         return 1;
     }
+    if (g_jogador.turno >= 25) {
+        ui_narrar("Os dez dias do ultimato de Drakmar se esgotaram. Sem uma resposta decisiva, as tropas de Malachar cruzaram as fronteiras. O reino não estava preparado.");
+        g_jogador.final_obtido   = 4;
+        g_jogador.jogo_encerrado = 1;
+        return 1;
+    }
     return 0;
 }
 
