@@ -3,7 +3,7 @@
 #include "salvamento.h"
 #include "entrada.h"
 #include "ui.h"
-#include "../audio/audio.h"
+#include "audio.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>

@@ -1,7 +1,7 @@
 #include "npcs.h"
 #include "ui.h"
 #include "entrada.h"
-#include "../audio/audio.h"
+#include "audio.h"
 #include <stdio.h>
 #include <string.h>
 

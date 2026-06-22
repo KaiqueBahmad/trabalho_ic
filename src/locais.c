@@ -5,7 +5,7 @@
 #include "npcs.h"
 #include "inventario.h"
 #include "salvamento.h"
-#include "../audio/audio.h"
+#include "audio.h"
 #include <stdio.h>
 #include <string.h>
 

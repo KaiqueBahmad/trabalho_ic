@@ -1,5 +1,5 @@
 #include "jogador.h"
-#include "../audio/audio.h"
+#include "audio.h"
 #include <stdio.h>
 #include <string.h>
 
