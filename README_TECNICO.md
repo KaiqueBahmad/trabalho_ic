@@ -104,5 +104,5 @@ gcc main.c audio/audio.c src/jogador.c src/inventario.c src/entrada.c src/ui.c s
 1. Vitória Militar — exército forte, batalha vencida
 2. Paz Diplomática — traidor preso, Erik como intermediário, negociação com Drakmar
 3. Herói do Povo — alta popularidade, povo se mobiliza
-4. Queda de Avalon — recursos insuficientes (final de derrota)
+4. Queda de Avalon — 25 turnos esgotados sem resolução, ou vida ≤ 0, ou ouro ≤ 0 com exército ≤ 10
 5. A Voz da Rainha (secreto) — carta de Erik chega à rainha de Drakmar

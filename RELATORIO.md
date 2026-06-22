@@ -29,3 +29,5 @@ O formato `CHAVE=VALOR` em arquivo `.txt` foi escolhido por ser legível por hum
 ### Narrativa e Finais
 
 Cinco finais foram implementados para garantir rejogabilidade e que escolhas tenham impacto real. O final secreto (5 - A Voz da Rainha) recompensa jogadores que exploram todas as possibilidades. A estrutura de flags booleanas no `Jogador` (como `traidor_revelado`, `prisioneiro_libertado`) torna as condições de final verificáveis de forma simples e eficiente.
+
+O Final 4 (derrota) é acionado automaticamente ao atingir 25 turnos sem resolução, criando pressão real de tempo que reflete o ultimato de Drakmar na narrativa. Isso garante que o final de derrota seja alcançável independentemente das escolhas do jogador.

@@ -101,7 +101,7 @@ Linux/macOS: `bash compile.sh` depois `./main`
 | General Marcus | Quartel | Diálogo disponível, oferece opções de treinamento |
 | Tobias (conselheiro) | Câmara do Conselho | Diálogo disponível; comportamento suspeito mencionado |
 | Erik (prisioneiro) | Masmorra | Diálogo disponível; libertação requer item correto |
-| Emissário de Drakmar | Salão do Trono (turno 1) | Aparece automaticamente com ultimato |
+| Emissário de Drakmar | Salão do Trono (turno 1) | Aparece com ultimato; ignorar por 25 turnos causa derrota |
 
 ---
 
@@ -114,7 +114,7 @@ Linux/macOS: `bash compile.sh` depois `./main`
 | 1 - Vitória Militar | Exército alto, batalha no Quartel | Texto de vitória militar |
 | 2 - Paz Diplomática | Traidor revelado + Erik libertado | Texto de tratado de paz |
 | 3 - Herói do Povo | Popularidade alta, povo ajudado | Texto de mobilização popular |
-| 4 - Queda de Avalon | Vida ≤ 0 ou (ouro ≤ 0 e exército ≤ 10) | Texto de derrota |
+| 4 - Queda de Avalon | Atingir 25 turnos sem escolher um final, ou (ouro ≤ 0 e exército ≤ 10), ou vida ≤ 0 | Texto de derrota |
 | 5 - A Voz da Rainha | Carta de Erik enviada à rainha | Texto do final secreto |
 
 ---

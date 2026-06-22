@@ -51,6 +51,7 @@ Estes comandos funcionam em qualquer momento do jogo:
 - Salve com frequência usando o comando `salvar`.
 - Se você ativar o áudio, use `repetir` caso perca alguma narração.
 - Preste atenção nas conversas com o emissário e com o prisioneiro da masmorra.
+- O prazo de Drakmar é real: o jogo termina em derrota após 25 turnos sem uma resolução.
 
 ## Finais
 
