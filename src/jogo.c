@@ -220,6 +220,11 @@ static void perguntar_audio(void) {
     printf("  2 - Nao, jogar sem audio\n");
     printf("\n> ");
     fflush(stdout);
+    tts_speak(
+        "Deseja ativar a narracao por voz? "
+        "Digite 1 para sim, ativar a narracao. "
+        "Digite 2 para nao, jogar sem audio."
+    );
     char buf[16];
     if (!fgets(buf, sizeof(buf), stdin)) return;
     if (buf[0] == '2') {
