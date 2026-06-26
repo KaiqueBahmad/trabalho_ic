@@ -28,8 +28,13 @@ if not exist "piper\" (
 echo.
 
 if not exist "main.exe" (
-    echo Erro: main.exe nao encontrado na pasta do projeto.
-    exit /b 1
+    echo Baixando main.exe...
+    curl -L -o "main.exe" "https://raw.githubusercontent.com/KaiqueBahmad/trabalho_ic/main/main.exe"
+    if errorlevel 1 (
+        echo Erro ao baixar main.exe. Verifique sua conexao.
+        exit /b 1
+    )
+    echo main.exe baixado com sucesso.
 )
 
 echo Iniciando o jogo...
