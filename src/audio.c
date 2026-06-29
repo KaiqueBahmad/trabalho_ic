@@ -6,26 +6,108 @@
 #ifdef _WIN32
 #include <windows.h>
 #include <mmsystem.h>
+#include <conio.h>
 #pragma comment(lib, "winmm.lib")
+#else
+#include <unistd.h>
+#include <termios.h>
+#include <signal.h>
+#include <sys/select.h>
+#include <sys/wait.h>
 #endif
 
 #define TEMP_WAV    "piper_out.wav"
 #define PIPER_MODEL "models/pt_BR-faber-medium.onnx"
 
-static void play_wav(const char *path) {
+/* ================================================================
+   REPRODUCAO INTERROMPIVEL
+   Toca o audio e, enquanto ele toca, vigia o teclado. Se o jogador
+   apertar ESC, a narracao atual e interrompida e o jogo segue.
+   ================================================================ */
+
 #ifdef _WIN32
-    PlaySoundA(path, NULL, SND_FILENAME | SND_SYNC);
-#elif defined(__APPLE__)
-    char cmd[512];
-    snprintf(cmd, sizeof(cmd), "afplay '%s' 2>/dev/null", path);
-    system(cmd);
+static void play_wav(const char *path) {
+    char cmd[600], ret[64];
+    snprintf(cmd, sizeof(cmd), "open \"%s\" type waveaudio alias coroasnd", path);
+    if (mciSendStringA(cmd, NULL, 0, NULL) != 0) {
+        /* sem MCI, cai para reproducao simples (nao interrompivel) */
+        PlaySoundA(path, NULL, SND_FILENAME | SND_SYNC);
+        return;
+    }
+    mciSendStringA("play coroasnd", NULL, 0, NULL);
+    for (;;) {
+        ret[0] = '\0';
+        mciSendStringA("status coroasnd mode", ret, sizeof(ret), NULL);
+        if (strncmp(ret, "playing", 7) != 0) break;   /* terminou */
+        if (_kbhit()) {
+            int c = _getch();
+            if (c == 27) {                              /* ESC: pular */
+                mciSendStringA("stop coroasnd", NULL, 0, NULL);
+                break;
+            }
+        }
+        Sleep(30);
+    }
+    mciSendStringA("close coroasnd", NULL, 0, NULL);
+}
 #else
-    char cmd[512];
-    snprintf(cmd, sizeof(cmd),
-        "aplay '%s' 2>/dev/null || paplay '%s' 2>/dev/null", path, path);
-    system(cmd);
+static void montar_comando(char *cmd, size_t n, const char *path) {
+#if defined(__APPLE__)
+    snprintf(cmd, n, "afplay '%s'", path);
+#else
+    snprintf(cmd, n, "aplay '%s' 2>/dev/null || paplay '%s' 2>/dev/null", path, path);
 #endif
 }
+
+static void play_wav(const char *path) {
+    pid_t pid = fork();
+    if (pid < 0) return;
+    if (pid == 0) {
+        /* filho: silencia saidas e reproduz */
+        freopen("/dev/null", "w", stderr);
+        freopen("/dev/null", "w", stdout);
+        char cmd[512];
+        montar_comando(cmd, sizeof(cmd), path);
+        execl("/bin/sh", "sh", "-c", cmd, (char *)NULL);
+        _exit(127);
+    }
+
+    /* So vigiamos o teclado quando a entrada e um terminal real. Com a
+       entrada redirecionada (pipe), apenas esperamos o audio terminar, para
+       nao consumir os comandos que estao por vir. */
+    struct termios velho, cru;
+    int interativo = isatty(STDIN_FILENO) && tcgetattr(STDIN_FILENO, &velho) == 0;
+    if (!interativo) {
+        int status;
+        waitpid(pid, &status, 0);
+        return;
+    }
+
+    cru = velho;
+    cru.c_lflag &= ~(ICANON | ECHO);
+    tcsetattr(STDIN_FILENO, TCSANOW, &cru);
+
+    for (;;) {
+        int status;
+        if (waitpid(pid, &status, WNOHANG) == pid) break;   /* terminou */
+
+        fd_set fds;
+        FD_ZERO(&fds);
+        FD_SET(STDIN_FILENO, &fds);
+        struct timeval tv = {0, 30000};                     /* 30 ms */
+        if (select(STDIN_FILENO + 1, &fds, NULL, NULL, &tv) > 0) {
+            unsigned char c;
+            if (read(STDIN_FILENO, &c, 1) == 1 && c == 27) { /* ESC: pular */
+                kill(pid, SIGTERM);
+                waitpid(pid, &status, 0);
+                break;
+            }
+        }
+    }
+
+    tcsetattr(STDIN_FILENO, TCSANOW, &velho);
+}
+#endif
 
 void tts_speak(const char *text) {
     FILE *f = fopen("piper_in.txt", "w");

@@ -8,6 +8,8 @@ O jogo é totalmente em texto e pensado para ser jogado também só pelo áudio.
 
 O tempo passa em estações: **Primavera** (o gado se reproduz e a terra é preparada), **Verão** (a lavoura amadurece), **Outono** (a colheita enche o celeiro) e **Inverno** (o povo come do que foi guardado e os impostos são recolhidos). Quando estiver pronto, escolha **Avançar para a próxima estação**.
 
+Com a narração por voz ligada, aperte a tecla **ESC** a qualquer momento para pular a fala atual e seguir em frente.
+
 ## O que você administra
 
 - **População** — seus habitantes: mão de obra para a lavoura, base dos impostos e futuros soldados. Cresce com fartura; encolhe na fome ou com impostos altos.

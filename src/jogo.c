@@ -387,7 +387,8 @@ static int processar_global(const char *cmd) {
     if (!strcmp(cmd, "ajuda")) {
         ui_msg("Comandos: digite o número da ação, ou as palavras situação, opções, repetir, "
                "salvar, áudio, sair. As ações de mercado pedem uma quantidade em seguida. "
-               "Digite guia para entender as regras do reino.");
+               "Digite guia para entender as regras do reino. "
+               "Com a narração ligada, aperte ESC para pular a fala atual.");
         return 1;
     }
     if (!strcmp(cmd, "guia") || !strcmp(cmd, "manual") || !strcmp(cmd, "regras") || !strcmp(cmd, "dicas")) {
@@ -561,8 +562,8 @@ static void perguntar_audio(void) {
         printf("\nNarração desativada. Ative quando quiser digitando 'audio'.\n\n");
     } else {
         g_audio_ativado = 1;
-        tts_speak("Narração ativada. Bem-vindo a O Peso da Coroa.");
-        printf("\nNarração ativada.\n\n");
+        tts_speak("Narração ativada. A qualquer momento, aperte a tecla ESC para pular a narração atual. Bem-vindo a O Peso da Coroa.");
+        printf("\nNarração ativada. Aperte ESC para pular uma narração.\n\n");
     }
 }
 
