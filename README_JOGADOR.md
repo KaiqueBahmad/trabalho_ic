@@ -29,7 +29,7 @@ Com a narração por voz ligada, aperte a tecla **ESC** a qualquer momento para 
 | `repetir`          | Repete a última narração por voz                 |
 | `salvar`           | Salva o reino em arquivo                         |
 | `audio`            | Ativa ou desativa a narração por voz             |
-| `velocidade`       | Alterna a velocidade da narração (normal / rápida / muito rápida) |
+| `velocidade`       | Alterna a velocidade da narração (normal / rápida / muito rápida); a escolha é lembrada entre sessões |
 | `ajuda`            | Mostra os comandos                               |
 | `sair`             | Encerra o jogo                                   |
 

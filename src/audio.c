@@ -37,6 +37,14 @@ const char *audio_velocidade_nome(void) {
     return nomes_vel[g_vel];
 }
 
+int audio_velocidade_idx(void) {
+    return g_vel;
+}
+
+void audio_velocidade_set(int idx) {
+    if (idx >= 0 && idx < 3) g_vel = idx;
+}
+
 /* ================================================================
    REPRODUCAO INTERROMPIVEL
    Toca o audio e, enquanto ele toca, vigia o teclado. Se o jogador

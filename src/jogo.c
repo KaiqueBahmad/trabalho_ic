@@ -412,6 +412,7 @@ static int processar_global(const char *cmd) {
     }
     if (!strcmp(cmd, "velocidade") || !strcmp(cmd, "vel")) {
         audio_proxima_velocidade();
+        salvar_config();
         char buf[80];
         snprintf(buf, sizeof(buf), "Velocidade da narração: %s.", audio_velocidade_nome());
         ui_msg(buf);
@@ -578,6 +579,7 @@ static void perguntar_audio(void) {
 
 void jogo_iniciar(void) {
     utils_semear();
+    carregar_config();   /* restaura a velocidade da narracao escolhida antes */
     if (!audio_disponivel()) {
         g_audio_ativado = 0;
         printf("Arquivos de áudio não encontrados. Narração por voz desativada.\n");
@@ -615,6 +617,7 @@ void jogo_iniciar(void) {
             break;
         } else if (!strcmp(cmd, "velocidade") || !strcmp(cmd, "vel")) {
             audio_proxima_velocidade();
+            salvar_config();
             char buf[80];
             snprintf(buf, sizeof(buf), "Velocidade da narração: %s.", audio_velocidade_nome());
             ui_msg(buf);

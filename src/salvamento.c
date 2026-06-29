@@ -1,4 +1,5 @@
 #include "salvamento.h"
+#include "audio.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -9,14 +10,19 @@
 
 extern int g_audio_ativado;
 
-#define SAVE_FILE "saves/save.txt"
+#define SAVE_FILE   "saves/save.txt"
+#define CONFIG_FILE "saves/config.txt"
 
-int salvar_reino(const Reino *r) {
+static void garantir_dir_saves(void) {
 #ifdef _WIN32
     _mkdir("saves");
 #else
     mkdir("saves", 0755);
 #endif
+}
+
+int salvar_reino(const Reino *r) {
+    garantir_dir_saves();
     FILE *f = fopen(SAVE_FILE, "w");
     if (!f) { printf("Erro ao abrir o arquivo de salvamento.\n"); return 0; }
 
@@ -79,4 +85,24 @@ int carregar_reino(Reino *r) {
     }
     printf("Reino carregado com sucesso.\n");
     return 1;
+}
+
+void salvar_config(void) {
+    garantir_dir_saves();
+    FILE *f = fopen(CONFIG_FILE, "w");
+    if (!f) return;
+    fprintf(f, "VELOCIDADE=%d\n", audio_velocidade_idx());
+    fclose(f);
+}
+
+void carregar_config(void) {
+    FILE *f = fopen(CONFIG_FILE, "r");
+    if (!f) return;
+    char linha[128];
+    while (fgets(linha, sizeof(linha), f)) {
+        char chave[64], valor[64];
+        if (sscanf(linha, "%63[^=]=%63[^\n]", chave, valor) != 2) continue;
+        if (!strcmp(chave, "VELOCIDADE")) audio_velocidade_set(atoi(valor));
+    }
+    fclose(f);
 }
