@@ -39,7 +39,7 @@ static int ler_escolha(int max) {
 /* ---- Peste no gado ---- */
 static void ev_peste_gado(Reino *r) {
     if (r->gado < 6) return;  /* sem rebanho relevante, sem evento */
-    ui_titulo("Acontecimento: Peste no Rebanho");
+    ui_titulo("Peste no Rebanho");
     ui_narrar("Uma doença se espalha entre o gado de Avalon. Os vaqueiros pedem ordens "
               "antes que o rebanho inteiro seja contaminado.");
     ui_prompt_menu("O que o rei decide?");
@@ -83,7 +83,7 @@ static void ev_peste_gado(Reino *r) {
 /* ---- Refugiados ---- */
 static void ev_refugiados(Reino *r) {
     int grupo = utils_rand(8, 20);
-    ui_titulo("Acontecimento: Refugiados na Estrada");
+    ui_titulo("Refugiados na Estrada");
     char intro[200];
     snprintf(intro, sizeof(intro),
         "Um grupo de %d camponeses de um reino vizinho chega aos portões de Avalon, "
@@ -118,7 +118,7 @@ static void ev_refugiados(Reino *r) {
 
 /* ---- Bandidos ---- */
 static void ev_bandidos(Reino *r) {
-    ui_titulo("Acontecimento: Saqueadores");
+    ui_titulo("Saqueadores");
     ui_narrar("Um bando de saqueadores ronda as estradas e ameaça o celeiro e o tesouro de Avalon.");
     ui_prompt_menu("Como responder?");
     ui_opcao(1, "Pagar a milícia para expulsá-los (20 de ouro)");
@@ -163,7 +163,7 @@ static void ev_bandidos(Reino *r) {
 
 /* ---- Caravana de mercadores ---- */
 static void ev_caravana(Reino *r) {
-    ui_titulo("Acontecimento: Caravana de Mercadores");
+    ui_titulo("Caravana de Mercadores");
     ui_narrar("Uma caravana rica acampa perto do castelo. O mestre mercador oferece um bom "
               "preço por gado e propõe vender mantimentos baratos.");
     ui_prompt_menu("O que negociar?");
@@ -202,7 +202,7 @@ static void ev_caravana(Reino *r) {
 static void ev_veio_ouro(Reino *r) {
     int achado = utils_rand(30, 60);
     r->ouro += achado;
-    ui_titulo("Acontecimento: Veio de Ouro");
+    ui_titulo("Veio de Ouro");
     char buf[160];
     snprintf(buf, sizeof(buf), "Mineiros encontram um veio de ouro nas colinas de Avalon. O tesouro real recebe %d moedas. Total: %d.", achado, r->ouro);
     ui_narrar(buf);
@@ -216,7 +216,7 @@ static void ev_bezerros(Reino *r) {
     if (crias < 2) crias = 2;
     r->gado += crias;
     if (r->gado > cap) r->gado = cap;
-    ui_titulo("Acontecimento: Estação Fértil");
+    ui_titulo("Estação Fértil");
     char buf[160];
     snprintf(buf, sizeof(buf), "Os bezerros nascem fortes nesta estação. O rebanho ganha %d cabeças. Total: %d.", crias, r->gado);
     ui_narrar(buf);
@@ -228,7 +228,7 @@ static void ev_geada(Reino *r) {
     if (perda < 5) perda = 5;
     if (perda > r->comida) perda = r->comida;
     r->comida -= perda;
-    ui_titulo("Acontecimento: Frente Fria");
+    ui_titulo("Frente Fria");
     char buf[160];
     snprintf(buf, sizeof(buf), "Uma frente fria estraga parte dos grãos guardados. O celeiro perde %d medidas, restando %d.", perda, r->comida);
     ui_narrar(buf);
@@ -238,7 +238,7 @@ static void ev_geada(Reino *r) {
 static void ev_boa_safra(Reino *r) {
     int ganho = utils_rand(25, 60);
     r->comida += ganho;
-    ui_titulo("Acontecimento: Pomar Generoso");
+    ui_titulo("Pomar Generoso");
     char buf[160];
     snprintf(buf, sizeof(buf), "Os pomares e hortas rendem além do esperado. O celeiro ganha %d medidas, somando %d.", ganho, r->comida);
     ui_narrar(buf);
@@ -361,7 +361,7 @@ static void drakmar_tributo(Reino *r) {
             drakmar_guerra(r);
             break;
         default:
-            ui_titulo("Fim: O Reino Vassalo");
+            ui_titulo("Fim: Reino Vassalo");
             ui_narrar("Avalon dobra os joelhos diante de Drakmar. O reino sobrevive, mas paga tributo "
                       "eterno e perde sua independência. Seu povo viverá, porém sob a sombra de outro rei. "
                       "Houve quem chamasse isso de prudência, e quem chamasse de covardia.");

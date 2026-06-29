@@ -304,31 +304,82 @@ static void mostrar_menu_acoes(void) {
     ui_falar_opcoes();
 }
 
-/* Guia das mecanicas que nao sao obvias so olhando o menu. */
+/* Explica um topico do guia. */
+static void guia_topico(int t) {
+    switch (t) {
+        case 1:
+            ui_titulo("Estações");
+            ui_msg("O ano tem quatro estações. Na primavera o gado procria e a terra é "
+                   "preparada; no verão a lavoura amadurece; no outono vem a colheita; no "
+                   "inverno o povo come do celeiro e os impostos são recolhidos.");
+            break;
+        case 2:
+            ui_titulo("Comida");
+            ui_msg("Cada habitante e cada soldado consome 2 medidas de comida no inverno. "
+                   "Se o celeiro não bastar, há fome e parte do povo morre. No relatório, "
+                   "veja a frase 'o inverno exige' para saber quanto vai precisar.");
+            break;
+        case 3:
+            ui_titulo("Colheita");
+            ui_msg("Cada campo rende grãos no outono, conforme o clima do ano e a mão de "
+                   "obra. Cada campo exige cerca de 6 habitantes; se faltar gente, parte "
+                   "dos campos fica sem colher.");
+            break;
+        case 4:
+            ui_titulo("Gado");
+            ui_msg("O rebanho cresce cerca de 25 por cento toda primavera, mas só até o "
+                   "limite do pasto, que é de 5 cabeças por campo. Roce mais campos para "
+                   "criar mais gado. Você pode vender gado por ouro ou abater por comida.");
+            break;
+        case 5:
+            ui_titulo("Impostos");
+            ui_msg("Perto de 15 por cento o reino fica equilibrado. Abaixo disso, novos "
+                   "moradores chegam e a população cresce. Acima de 20 por cento, parte do "
+                   "povo migra para outras terras: rende mais ouro, mas encolhe o reino.");
+            break;
+        case 6:
+            ui_titulo("Campos");
+            ui_msg("Roçar novos campos aumenta a colheita e o pasto para o gado, mas eles "
+                   "só rendem se houver gente suficiente para lavrá-los.");
+            break;
+        case 7:
+            ui_titulo("Drakmar");
+            ui_msg("Depois de alguns anos surgem rumores de guerra e, com eles, as ações de "
+                   "recrutar soldados e reforçar muralhas. Soldados também comem do celeiro "
+                   "no inverno. Mais tarde, um emissário exige tributo: você pode pagar para "
+                   "adiar, submeter-se, ou recusar e ir à guerra. Quanto mais cedo se "
+                   "preparar, mais forte estará na batalha final.");
+            break;
+        default:
+            ui_erro("Tópico inválido.");
+    }
+}
+
+/* Guia interativo: o jogador escolhe sobre o que quer saber. */
 static void mostrar_guia(void) {
-    ui_titulo("Guia do Reino");
-    ui_msg("As estações: na primavera o gado procria e a terra é preparada; no verão a "
-           "lavoura amadurece; no outono vem a colheita; no inverno o povo come do celeiro "
-           "e os impostos são recolhidos.");
-    ui_msg("Comida e inverno: cada habitante e cada soldado consome 2 medidas de comida no "
-           "inverno. Se o celeiro não bastar, há fome e parte do povo morre. No relatório, "
-           "veja a frase 'o inverno exige' para saber quanto vai precisar.");
-    ui_msg("Colheita: cada campo rende grãos no outono, mas depende do clima do ano e de "
-           "haver gente para lavrar. Cada campo exige cerca de 6 habitantes; se faltar mão "
-           "de obra, parte dos campos fica sem colher.");
-    ui_msg("Gado: o rebanho cresce cerca de 25 por cento toda primavera, mas só até o limite "
-           "do pasto, que é de 5 cabeças por campo. Roce mais campos para criar mais gado. "
-           "Você pode vender gado por ouro ou abater por comida nos anos ruins.");
-    ui_msg("Imposto: perto de 15 por cento o reino fica equilibrado. Abaixo disso, novos "
-           "moradores chegam e a população cresce mais rápido. Acima de 20 por cento, parte "
-           "do povo migra para outras terras: rende mais ouro, mas encolhe o reino.");
-    ui_msg("Campos: roçar novos campos aumenta a colheita e o pasto para o gado, mas eles só "
-           "rendem se houver gente suficiente para lavrá-los.");
-    ui_msg("A ameaça de Drakmar: depois de alguns anos surgem rumores de guerra e, com eles, "
-           "as ações de recrutar soldados e reforçar muralhas. Lembre-se que soldados também "
-           "comem do celeiro no inverno. Mais tarde, um emissário exige tributo: você pode "
-           "pagar para adiar, submeter-se, ou recusar e enfrentar a guerra. Quanto mais cedo "
-           "você se preparar, mais forte estará na batalha final.");
+    for (;;) {
+        ui_prompt_menu("Guia. Sobre o que deseja saber?");
+        ui_opcao(1, "Estações");
+        ui_opcao(2, "Comida e fome");
+        ui_opcao(3, "Colheita");
+        ui_opcao(4, "Gado");
+        ui_opcao(5, "Impostos");
+        ui_opcao(6, "Campos");
+        ui_opcao(7, "Drakmar e a guerra");
+        ui_opcao(0, "Voltar");
+        ui_falar_opcoes();
+
+        char cmd[CMD_MAX];
+        entrada_ler(cmd, CMD_MAX);
+        entrada_normalizar(cmd);
+        if (!entrada_eh_numero(cmd)) {
+            ui_msg("Digite o número do tópico, ou 0 para voltar.");
+            continue;
+        }
+        int n = atoi(cmd);
+        if (n == 0) return;
+        guia_topico(n);
+    }
 }
 
 /* Retorna 1 se um comando global foi tratado. */
@@ -424,24 +475,24 @@ static void mostrar_final(const Reino *r) {
                       "força das armas que você teve a sabedoria de preparar a tempo.");
             break;
         case 2:
-            ui_titulo("Fim: A Idade de Ouro de Avalon");
+            ui_titulo("Fim: Idade de Ouro");
             ui_narrar("Avalon não apenas repele Drakmar como sai da guerra forte e próspera. "
                       "Celeiros cheios, povo numeroso e cofres fartos: o reino que você construiu "
                       "ao longo dos anos resistiu à maior das provações. Seu reinado será lembrado "
                       "como a idade de ouro de Avalon.");
             break;
         case 3:
-            ui_titulo("Fim: O Reino Vassalo");
+            ui_titulo("Fim: Reino Vassalo");
             ui_narrar("Avalon vive, mas curvada sob o jugo de Drakmar. A coroa pesou demais para "
                       "ser defendida, e a independência foi o preço da sobrevivência.");
             break;
         case 4:
-            ui_titulo("Fim: A Queda de Avalon");
+            ui_titulo("Fim: Queda de Avalon");
             ui_narrar("As muralhas cedem e as tropas de Drakmar tomam o reino. O que você construiu "
                       "passa para as mãos do inimigo. Faltou preparo para a hora decisiva.");
             break;
         case 5:
-            ui_titulo("Fim: O Reino Despovoado");
+            ui_titulo("Fim: Reino Despovoado");
             ui_narrar("Avalon esvaziou-se. Sem povo para lavrar a terra, o reino deixou de existir. "
                       "A fome e a má gestão fizeram o que nenhum exército conseguiria.");
             break;
