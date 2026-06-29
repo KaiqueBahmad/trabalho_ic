@@ -92,7 +92,7 @@ int entrada_confirmar(const char *pergunta) {
     char buf[CMD_MAX];
     printf("\n%s\n", pergunta);
     printf("  1 - Sim\n");
-    printf("  2 - Nao\n");
+    printf("  2 - Não\n");
     if (g_audio_ativado) {
         char completo[CMD_MAX + 32];
         snprintf(completo, sizeof(completo), "%s. Um para sim, dois para não.", pergunta);

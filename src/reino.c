@@ -34,7 +34,7 @@ void reino_inicializar(Reino *r, const char *nome) {
 const char *reino_nome_estacao(Estacao e) {
     switch (e) {
         case EST_PRIMAVERA: return "Primavera";
-        case EST_VERAO:     return "Verao";
+        case EST_VERAO:     return "Verão";
         case EST_OUTONO:    return "Outono";
         case EST_INVERNO:   return "Inverno";
         default:            return "Desconhecida";
@@ -73,23 +73,23 @@ static void processar_primavera(Reino *r) {
               "e os campos voltam a ganhar vida.");
     if (ganho > 0) {
         char buf[120];
-        snprintf(buf, sizeof(buf), "O rebanho cresceu: nasceram %d cabecas de gado. Total: %d.", ganho, r->gado);
+        snprintf(buf, sizeof(buf), "O rebanho cresceu: nasceram %d cabeças de gado. Total: %d.", ganho, r->gado);
         ui_msg(buf);
     } else if (r->gado >= cap && r->gado > 0) {
-        ui_msg("O pasto esta no limite: o rebanho nao cresceu por falta de terra. Roce mais campos para criar mais gado.");
+        ui_msg("O pasto está no limite: o rebanho não cresceu por falta de terra. Roce mais campos para criar mais gado.");
     }
 }
 
 static void processar_verao(Reino *r) {
     (void)r;
-    ui_narrar("O verao amadurece as lavouras sob o sol. O reino aguarda a colheita.");
+    ui_narrar("O verão amadurece as lavouras sob o sol. O reino aguarda a colheita.");
 }
 
 static void processar_outono(Reino *r) {
     int colheita = reino_colheita_prevista(r);
     r->comida += colheita;
     char buf[160];
-    snprintf(buf, sizeof(buf), "Chega o outono e a colheita e recolhida: %d medidas de graos. "
+    snprintf(buf, sizeof(buf), "Chega o outono e a colheita é recolhida: %d medidas de grãos. "
              "O celeiro agora guarda %d medidas.", colheita, r->comida);
     ui_narrar(buf);
     if (reino_campos_trabalhaveis(r) < r->campos)
@@ -114,7 +114,7 @@ static void processar_inverno(Reino *r) {
         if (mortes_fome > r->populacao) mortes_fome = r->populacao;
         r->populacao -= mortes_fome;
         char buf[180];
-        snprintf(buf, sizeof(buf), "FOME. O celeiro nao bastou para o inverno. %d habitantes morreram de fome.", mortes_fome);
+        snprintf(buf, sizeof(buf), "Fome. O celeiro não bastou para o inverno. %d habitantes morreram de fome.", mortes_fome);
         ui_narrar(buf);
     }
 
@@ -145,7 +145,7 @@ static void processar_inverno(Reino *r) {
         char buf[200];
         snprintf(buf, sizeof(buf),
             "Movimento do povo: %d nasceram, %d chegaram em busca de uma vida melhor, "
-            "%d partiram por causa dos impostos. Populacao: %d.",
+            "%d partiram por causa dos impostos. População: %d.",
             nascimentos, imigrantes, emigrantes, r->populacao);
         ui_msg(buf);
     }

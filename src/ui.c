@@ -66,37 +66,36 @@ void ui_falar_opcoes(void) {
 
 void ui_repetir(void) {
     if (ultima_descricao[0] == '\0') {
-        ui_msg("Nenhuma descricao anterior para repetir.");
+        ui_msg("Nenhuma descrição anterior para repetir.");
         return;
     }
-    printf("\nRepetindo ultima descricao:\n%s\n", ultima_descricao);
+    printf("\nRepetindo última descrição:\n%s\n", ultima_descricao);
     falar(ultima_descricao);
 }
 
 void ui_ajuda(void) {
     const char *texto =
         "Comandos disponíveis a qualquer momento: "
-        "ajuda, status, inventario, examinar, repetir, opcoes, salvar, audio, sair. "
+        "ajuda, situação, opções, repetir, salvar, áudio, sair. "
         "Você pode digitar o número ou o nome da ação. "
         "Maiúsculas, acentos e espaços extras são aceitos.";
-    printf("\nAJUDA - Comandos disponíveis a qualquer momento:\n\n");
-    printf("  ajuda      - Exibe esta lista de comandos\n");
-    printf("  status     - Mostra os atributos do rei\n");
-    printf("  inventario - Lista os itens que voce possui\n");
-    printf("  examinar   - Examina os itens do inventario\n");
-    printf("  repetir    - Repete a ultima descricao narrada\n");
-    printf("  opcoes     - Repete as opcoes do local atual\n");
-    printf("  salvar     - Salva o progresso do jogo\n");
-    printf("  audio      - Ativa ou desativa a narracao por voz\n");
-    printf("  sair       - Sai do jogo\n\n");
-    printf("Voce pode digitar o numero ou o nome da acao.\n");
-    printf("Maiusculas, acentos e espacos extras sao aceitos.\n\n");
+    printf("\nAjuda - comandos disponíveis a qualquer momento:\n\n");
+    printf("  ajuda     - Exibe esta lista de comandos\n");
+    printf("  situacao  - Mostra o estado do reino\n");
+    printf("  guia      - Explica as regras do reino\n");
+    printf("  opcoes    - Repete as opções da estação atual\n");
+    printf("  repetir   - Repete a última narração por voz\n");
+    printf("  salvar    - Salva o progresso do jogo\n");
+    printf("  audio     - Ativa ou desativa a narração por voz\n");
+    printf("  sair      - Sai do jogo\n\n");
+    printf("Você pode digitar o número ou o nome da ação.\n");
+    printf("Maiúsculas, acentos e espaços extras são aceitos.\n\n");
     falar(texto);
 }
 
 void ui_opcoes_globais(void) {
     if (ultimas_opcoes_display[0] != '\0') {
-        printf("\nOpcoes disponiveis:\n%s", ultimas_opcoes_display);
+        printf("\nOpções disponíveis:\n%s", ultimas_opcoes_display);
         if (g_audio_ativado) tts_speak(ultimas_opcoes_fala);
     } else {
         ui_msg("Use ajuda para ver os comandos disponíveis.");

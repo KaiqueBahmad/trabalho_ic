@@ -18,7 +18,7 @@ int salvar_reino(const Reino *r) {
     mkdir("saves", 0755);
 #endif
     FILE *f = fopen(SAVE_FILE, "w");
-    if (!f) { printf("Erro ao abrir arquivo de salvamento.\n"); return 0; }
+    if (!f) { printf("Erro ao abrir o arquivo de salvamento.\n"); return 0; }
 
     fprintf(f, "NOME=%s\n",          r->nome);
     fprintf(f, "ANO=%d\n",           r->ano);
@@ -45,7 +45,7 @@ int salvar_reino(const Reino *r) {
 int carregar_reino(Reino *r) {
     FILE *f = fopen(SAVE_FILE, "r");
     if (!f) {
-        printf("Nenhum reino salvo encontrado.\n");
+        printf("Nenhum reino salvo foi encontrado.\n");
         return 0;
     }
     memset(r, 0, sizeof(Reino));
@@ -74,7 +74,7 @@ int carregar_reino(Reino *r) {
     }
     fclose(f);
     if (r->ano <= 0 || r->populacao <= 0) {
-        printf("O arquivo de salvamento esta vazio ou em formato antigo. Nao foi possivel carregar.\n");
+        printf("O arquivo de salvamento está vazio ou em formato antigo. Não foi possível carregar.\n");
         return 0;
     }
     printf("Reino carregado com sucesso.\n");

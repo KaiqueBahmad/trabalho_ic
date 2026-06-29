@@ -21,6 +21,7 @@ O tempo passa em estações: **Primavera** (o gado se reproduz e a terra é prep
 
 | Comando            | O que faz                                        |
 |--------------------|--------------------------------------------------|
+| `guia`             | Explica as regras do reino (estações, gado, impostos, Drakmar) |
 | `situacao`         | Relê o estado completo do reino                  |
 | `opcoes`           | Repete as ações disponíveis na estação           |
 | `repetir`          | Repete a última narração por voz                 |
