@@ -386,9 +386,10 @@ static void mostrar_guia(void) {
 static int processar_global(const char *cmd) {
     if (!strcmp(cmd, "ajuda")) {
         ui_msg("Comandos: digite o número da ação, ou as palavras situação, opções, repetir, "
-               "salvar, áudio, sair. As ações de mercado pedem uma quantidade em seguida. "
+               "salvar, áudio, velocidade, sair. As ações de mercado pedem uma quantidade em seguida. "
                "Digite guia para entender as regras do reino. "
-               "Com a narração ligada, aperte ESC para pular a fala atual.");
+               "Com a narração ligada, aperte ESC para pular a fala atual, e digite "
+               "velocidade para deixar a narração mais rápida.");
         return 1;
     }
     if (!strcmp(cmd, "guia") || !strcmp(cmd, "manual") || !strcmp(cmd, "regras") || !strcmp(cmd, "dicas")) {
@@ -407,6 +408,13 @@ static int processar_global(const char *cmd) {
     if (!strcmp(cmd, "audio")) {
         g_audio_ativado = !g_audio_ativado;
         printf("Narração por voz: %s\n", g_audio_ativado ? "ATIVADA" : "DESATIVADA");
+        return 1;
+    }
+    if (!strcmp(cmd, "velocidade") || !strcmp(cmd, "vel")) {
+        audio_proxima_velocidade();
+        char buf[80];
+        snprintf(buf, sizeof(buf), "Velocidade da narração: %s.", audio_velocidade_nome());
+        ui_msg(buf);
         return 1;
     }
     if (!strcmp(cmd, "sair")) {
@@ -605,6 +613,14 @@ void jogo_iniciar(void) {
         } else if (!strcmp(cmd, "0") || !strcmp(cmd, "sair")) {
             printf("Até logo!\n");
             break;
+        } else if (!strcmp(cmd, "velocidade") || !strcmp(cmd, "vel")) {
+            audio_proxima_velocidade();
+            char buf[80];
+            snprintf(buf, sizeof(buf), "Velocidade da narração: %s.", audio_velocidade_nome());
+            ui_msg(buf);
+        } else if (!strcmp(cmd, "audio")) {
+            g_audio_ativado = !g_audio_ativado;
+            printf("Narração por voz: %s\n", g_audio_ativado ? "ATIVADA" : "DESATIVADA");
         } else {
             ui_erro("Opção inválida. Digite 1, 2, 3 ou 0.");
         }

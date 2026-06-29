@@ -24,6 +24,19 @@
    o zera a cada novo prompt (ver entrada_ler_linha). */
 int g_pular_narracao = 0;
 
+/* Velocidade da narracao. length_scale menor = fala mais rapida. */
+static int g_vel = 0;
+static const double escalas[]   = { 0.80, 0.60, 0.45 };
+static const char  *nomes_vel[] = { "NORMAL", "RÁPIDA", "MUITO RÁPIDA" };
+
+void audio_proxima_velocidade(void) {
+    g_vel = (g_vel + 1) % 3;
+}
+
+const char *audio_velocidade_nome(void) {
+    return nomes_vel[g_vel];
+}
+
 /* ================================================================
    REPRODUCAO INTERROMPIVEL
    Toca o audio e, enquanto ele toca, vigia o teclado. Se o jogador
@@ -134,17 +147,18 @@ void tts_speak(const char *text) {
     fclose(f);
 
     char cmd[8192];
+    double escala = escalas[g_vel];
 
 #ifdef _WIN32
     snprintf(cmd, sizeof(cmd),
-        "cd piper && piper.exe --model \"..\\%s\" --length_scale 0.8"
+        "cd piper && piper.exe --model \"..\\%s\" --length_scale %.2f"
         " --output_file \"..\\%s\" < \"..\\piper_in.txt\" >nul 2>nul",
-        PIPER_MODEL, TEMP_WAV);
+        PIPER_MODEL, escala, TEMP_WAV);
 #else
     snprintf(cmd, sizeof(cmd),
-        "cd piper && ./piper --model '../%s' --length_scale 0.8"
+        "cd piper && ./piper --model '../%s' --length_scale %.2f"
         " --output_file '../%s' < '../piper_in.txt' >/dev/null 2>&1",
-        PIPER_MODEL, TEMP_WAV);
+        PIPER_MODEL, escala, TEMP_WAV);
 #endif
 
     int ret = system(cmd);
