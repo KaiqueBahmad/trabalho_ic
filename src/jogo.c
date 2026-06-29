@@ -1,17 +1,29 @@
 #include "jogo.h"
-#include "locais.h"
+#include "reino.h"
 #include "salvamento.h"
 #include "entrada.h"
 #include "ui.h"
 #include "audio.h"
+#include "utils.h"
+#include "eventos.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 
-Jogador    g_jogador;
-Inventario g_inventario;
-int        g_audio_ativado = 1;
+Reino g_reino;
+int   g_audio_ativado = 1;
 
+/* precos do mercado e custos das obras */
+#define GADO_COMPRA   9
+#define GADO_VENDA    6
+#define GADO_ABATE    10   /* comida obtida por cabeca abatida */
+#define CAMPO_CUSTO   35
+#define COMIDA_COMPRA 2    /* ouro por medida comprada */
+#define COMIDA_VENDA  1    /* ouro por medida vendida */
+
+/* ================================================================
+   AUDIO
+   ================================================================ */
 static int audio_disponivel(void) {
 #ifdef _WIN32
     FILE *f = fopen("piper/piper.exe", "rb");
@@ -26,138 +38,293 @@ static int audio_disponivel(void) {
     return 1;
 }
 
-static void mostrar_intro_novo_jogo(void) {
-    ui_titulo("O PESO DA COROA");
-    ui_narrar(
-        "Os sinos do castelo ressoam na aurora fria. "
-        "Você é o Rei de Avalon, soberano de terras férteis e povo leal. "
-        "Mas a paz que seu pai construiu está em risco. "
-        "A leste, o poderoso reino de Drakmar move suas tropas em direção às suas fronteiras. "
-        "Na corte, rumores de traição circulam em sussurros. "
-        "O destino de Avalon está em suas mãos."
-    );
+static void falar(const char *t) { if (g_audio_ativado) tts_speak(t); }
+
+/* ================================================================
+   RELATORIO DO REINO
+   ================================================================ */
+static const char *clima_desc(int clima) {
+    if (clima < 75)  return "ano de seca e geadas, lavoura fraca";
+    if (clima < 90)  return "ano abaixo do normal para a lavoura";
+    if (clima <= 110) return "ano normal para a lavoura";
+    if (clima <= 130) return "ano bom, chuvas na medida";
+    return "ano excelente, colheita farta a caminho";
+}
+
+static void mostrar_relatorio(const Reino *r) {
+    int necessario = reino_comida_necessaria(r);
+    int colheita   = reino_colheita_prevista(r);
+    int trab       = reino_campos_trabalhaveis(r);
+    int pasto      = reino_capacidade_pasto(r);
+
+    printf("\n==== Ano %d de reinado - %s ====\n\n", r->ano, reino_nome_estacao(r->estacao));
+    printf("  Populacao:  %d habitantes\n", r->populacao);
+    printf("  Comida:     %d medidas no celeiro (o inverno exige %d)\n", r->comida, necessario);
+    printf("  Gado:       %d cabecas (o pasto sustenta ate %d)\n", r->gado, pasto);
+    printf("  Campos:     %d (lavraveis com a mao de obra atual: %d)\n", r->campos, trab);
+    printf("  Ouro:       %d moedas no tesouro\n", r->ouro);
+    printf("  Imposto:    %d por cento\n", r->imposto);
+    printf("  Clima:      %s\n", clima_desc(r->clima));
+    if (r->fase_drakmar >= 1) {
+        printf("  Soldados:   %d (muralhas nivel %d)\n", r->soldados, r->muralhas);
+        printf("  Ameaca de Drakmar: %d\n", r->ameaca);
+    }
+
+    /* aviso de planejamento */
+    const char *aviso = NULL;
+    if (r->estacao == EST_PRIMAVERA || r->estacao == EST_VERAO) {
+        if (r->comida + colheita < necessario)
+            aviso = "Atencao: as reservas mais a colheita prevista podem nao bastar para o inverno.";
+    } else {
+        if (r->comida < necessario)
+            aviso = "Atencao: o celeiro esta abaixo do que o inverno vai exigir.";
+    }
+    if (aviso) printf("\n  %s\n", aviso);
     printf("\n");
+
+    if (g_audio_ativado) {
+        char mil[160] = "";
+        if (r->fase_drakmar >= 1)
+            snprintf(mil, sizeof(mil),
+                "Soldados: %d. Muralhas nivel %d. Ameaca de Drakmar: %d. ",
+                r->soldados, r->muralhas, r->ameaca);
+        char resumo[760];
+        snprintf(resumo, sizeof(resumo),
+            "Ano %d de reinado, %s. "
+            "Populacao: %d habitantes. Comida: %d medidas, e o inverno exige %d. "
+            "Gado: %d cabecas. Campos: %d. Ouro: %d moedas. Imposto: %d por cento. Clima: %s. %s%s",
+            r->ano, reino_nome_estacao(r->estacao),
+            r->populacao, r->comida, necessario, r->gado, r->campos, r->ouro,
+            r->imposto, clima_desc(r->clima), mil, aviso ? aviso : "");
+        tts_speak(resumo);
+    }
 }
 
-static void mostrar_final(void) {
-    ui_separador();
-    switch (g_jogador.final_obtido) {
-        case 1:
-            ui_titulo("FIM - VITÓRIA MILITAR");
-            ui_narrar(
-                "Com o exército de Avalon no auge de sua força, você declara guerra a Drakmar. "
-                "A batalha é brutal, mas seus soldados lutam com o coração. "
-                "O General Marcus lidera a carga final. "
-                "Drakmar recua. O Rei Malachar assina uma rendição humilhante. "
-                "Avalon é salva pela espada. Seu nome será cantado por gerações."
-            );
-            break;
-        case 2:
-            ui_titulo("FIM - PAZ DIPLOMÁTICA");
-            ui_narrar(
-                "Com o traidor preso e Erik como intermediário, você inicia negociações com a Rainha Serafina de Drakmar. "
-                "As conversas são tensas, mas a sabedoria prevalece. "
-                "Um tratado de paz é assinado. As fronteiras são garantidas. "
-                "O comércio entre os reinos prospera. "
-                "Você passará à história como o rei que escolheu a sabedoria em vez da guerra."
-            );
-            break;
-        case 3:
-            ui_titulo("FIM - HERÓI DO POVO");
-            ui_narrar(
-                "O povo de Avalon, grato por tudo que você fez por eles, responde ao seu chamado. "
-                "Milhares de civis se erguem em defesa do reino. "
-                "Drakmar, ao ver um povo unido e determinado, recua sem lutar. "
-                "Nenhum rei com tal amor do povo pode ser derrubado. "
-                "Avalon se torna um exemplo para todos os reinos vizinhos."
-            );
-            break;
-        case 4:
-            ui_titulo("FIM - QUEDA DE AVALON");
-            ui_narrar(
-                "Sem recursos, sem exército ou sem saúde para governar, "
-                "Avalon não consegue resistir à ameaça de Drakmar. "
-                "As tropas inimigas cruzam as fronteiras sem resistência. "
-                "O povo sofre as consequências. "
-                "O peso da coroa, no fim, foi pesado demais."
-            );
-            break;
-        case 5:
-            ui_titulo("FIM SECRETO - A VOZ DA RAINHA");
-            ui_narrar(
-                "A carta de Erik chega à Rainha Serafina de Drakmar. "
-                "Ela confronta o Rei Malachar com as evidências da corrupção de Lord Aldric, "
-                "que provocava a guerra para seu próprio benefício. "
-                "Malachar, furioso com a traição, ordena a retirada das tropas. "
-                "Uma aliança inesperada nasce entre Avalon e Drakmar. "
-                "Você descobriu que o maior inimigo não estava além das fronteiras, "
-                "mas dentro do próprio castelo."
-            );
-            break;
-        default:
-            ui_msg("Fim de jogo.");
-    }
-    printf("\nObrigado por jogar O Peso da Coroa!\n");
-    printf("Turno final: %d. Ouro: %d. Exercito: %d. Popularidade: %d.\n",
-        g_jogador.turno, g_jogador.ouro, g_jogador.exercito, g_jogador.popularidade);
-    ui_separador();
+/* ================================================================
+   ENTRADA AUXILIAR
+   ================================================================ */
+static int ler_quantidade(const char *pergunta) {
+    char buf[CMD_MAX];
+    printf("%s ", pergunta);
+    falar(pergunta);
+    fflush(stdout);
+    entrada_ler(buf, CMD_MAX);
+    entrada_normalizar(buf);
+    if (!entrada_eh_numero(buf)) return 0;
+    return atoi(buf);
 }
 
-int jogo_verificar_fim(void) {
-    if (g_jogador.jogo_encerrado) return 1;
-    if (g_jogador.vida <= 0 || (g_jogador.ouro <= 0 && g_jogador.exercito <= 10)) {
-        g_jogador.final_obtido   = 4;
-        g_jogador.jogo_encerrado = 1;
-        return 1;
-    }
-    if (g_jogador.turno >= 25) {
-        ui_narrar("Os dez dias do ultimato de Drakmar se esgotaram. Sem uma resposta decisiva, as tropas de Malachar cruzaram as fronteiras. O reino não estava preparado.");
-        g_jogador.final_obtido   = 4;
-        g_jogador.jogo_encerrado = 1;
-        return 1;
-    }
-    return 0;
+/* ================================================================
+   ACOES DE GESTAO
+   ================================================================ */
+static void acao_impostos(Reino *r) {
+    char buf[160];
+    snprintf(buf, sizeof(buf),
+        "O imposto atual e de %d por cento. Abaixo de %d por cento o reino atrai novos moradores; "
+        "acima de 20 por cento, parte do povo migra para outras terras.", r->imposto, 15);
+    ui_msg(buf);
+    int novo = ler_quantidade("Defina a nova aliquota de imposto, de 0 a 60 por cento:");
+    if (novo < 0) novo = 0;
+    if (novo > 60) novo = 60;
+    r->imposto = novo;
+    snprintf(buf, sizeof(buf), "Imposto definido em %d por cento.", r->imposto);
+    ui_msg(buf);
 }
 
-int jogo_processar_global(const char *cmd) {
+static void acao_comprar_gado(Reino *r) {
+    char buf[160];
+    snprintf(buf, sizeof(buf), "Cada cabeca de gado custa %d moedas. Voce tem %d moedas.", GADO_COMPRA, r->ouro);
+    ui_msg(buf);
+    int q = ler_quantidade("Quantas cabecas deseja comprar?");
+    if (q <= 0) { ui_msg("Compra cancelada."); return; }
+    int custo = q * GADO_COMPRA;
+    if (custo > r->ouro) { ui_msg("Ouro insuficiente para essa compra."); return; }
+    int cap = reino_capacidade_pasto(r);
+    if (r->gado + q > cap)
+        ui_msg("Aviso: parte do rebanho excede o pasto e nao vai se reproduzir ate haver mais campos.");
+    r->ouro -= custo;
+    r->gado += q;
+    snprintf(buf, sizeof(buf), "Compradas %d cabecas por %d moedas. Rebanho: %d. Tesouro: %d.", q, custo, r->gado, r->ouro);
+    ui_msg(buf);
+}
+
+static void acao_vender_gado(Reino *r) {
+    if (r->gado <= 0) { ui_msg("Nao ha gado para vender."); return; }
+    char buf[160];
+    snprintf(buf, sizeof(buf), "Cada cabeca rende %d moedas na venda. Voce tem %d cabecas.", GADO_VENDA, r->gado);
+    ui_msg(buf);
+    int q = ler_quantidade("Quantas cabecas deseja vender?");
+    if (q <= 0) { ui_msg("Venda cancelada."); return; }
+    if (q > r->gado) q = r->gado;
+    int receita = q * GADO_VENDA;
+    r->gado -= q;
+    r->ouro += receita;
+    snprintf(buf, sizeof(buf), "Vendidas %d cabecas por %d moedas. Rebanho: %d. Tesouro: %d.", q, receita, r->gado, r->ouro);
+    ui_msg(buf);
+}
+
+static void acao_abater_gado(Reino *r) {
+    if (r->gado <= 0) { ui_msg("Nao ha gado para abater."); return; }
+    char buf[160];
+    snprintf(buf, sizeof(buf), "Cada cabeca abatida rende %d medidas de comida. Voce tem %d cabecas.", GADO_ABATE, r->gado);
+    ui_msg(buf);
+    int q = ler_quantidade("Quantas cabecas deseja abater?");
+    if (q <= 0) { ui_msg("Abate cancelado."); return; }
+    if (q > r->gado) q = r->gado;
+    int ganho = q * GADO_ABATE;
+    r->gado   -= q;
+    r->comida += ganho;
+    snprintf(buf, sizeof(buf), "Abatidas %d cabecas, rendendo %d medidas. Celeiro: %d. Rebanho: %d.", q, ganho, r->comida, r->gado);
+    ui_msg(buf);
+}
+
+static void acao_rocar_campo(Reino *r) {
+    char buf[160];
+    snprintf(buf, sizeof(buf), "Roçar um novo campo custa %d moedas. Voce tem %d.", CAMPO_CUSTO, r->ouro);
+    ui_msg(buf);
+    int q = ler_quantidade("Quantos campos novos deseja roçar?");
+    if (q <= 0) { ui_msg("Nenhum campo roçado."); return; }
+    int custo = q * CAMPO_CUSTO;
+    if (custo > r->ouro) {
+        int possivel = r->ouro / CAMPO_CUSTO;
+        if (possivel <= 0) { ui_msg("Ouro insuficiente para roçar campos."); return; }
+        q = possivel; custo = q * CAMPO_CUSTO;
+    }
+    r->ouro   -= custo;
+    r->campos += q;
+    snprintf(buf, sizeof(buf), "Roçados %d campos por %d moedas. Campos: %d. Eles renderao na proxima colheita.", q, custo, r->campos);
+    ui_msg(buf);
+}
+
+static void acao_comprar_comida(Reino *r) {
+    char buf[160];
+    snprintf(buf, sizeof(buf), "Cada medida de comida custa %d moedas. Voce tem %d.", COMIDA_COMPRA, r->ouro);
+    ui_msg(buf);
+    int q = ler_quantidade("Quantas medidas deseja comprar?");
+    if (q <= 0) { ui_msg("Compra cancelada."); return; }
+    int custo = q * COMIDA_COMPRA;
+    if (custo > r->ouro) {
+        q = r->ouro / COMIDA_COMPRA;
+        if (q <= 0) { ui_msg("Ouro insuficiente."); return; }
+        custo = q * COMIDA_COMPRA;
+    }
+    r->ouro   -= custo;
+    r->comida += q;
+    snprintf(buf, sizeof(buf), "Compradas %d medidas por %d moedas. Celeiro: %d. Tesouro: %d.", q, custo, r->comida, r->ouro);
+    ui_msg(buf);
+}
+
+static void acao_vender_comida(Reino *r) {
+    if (r->comida <= 0) { ui_msg("Nao ha comida no celeiro para vender."); return; }
+    char buf[160];
+    snprintf(buf, sizeof(buf), "Cada medida vendida rende %d moeda. Voce tem %d medidas.", COMIDA_VENDA, r->comida);
+    ui_msg(buf);
+    int q = ler_quantidade("Quantas medidas deseja vender?");
+    if (q <= 0) { ui_msg("Venda cancelada."); return; }
+    if (q > r->comida) q = r->comida;
+    int receita = q * COMIDA_VENDA;
+    r->comida -= q;
+    r->ouro   += receita;
+    snprintf(buf, sizeof(buf), "Vendidas %d medidas por %d moedas. Celeiro: %d. Tesouro: %d.", q, receita, r->comida, r->ouro);
+    ui_msg(buf);
+}
+
+/* ---- acoes militares (surgem com a ameaca de Drakmar) ---- */
+#define SOLDADO_CUSTO 5
+#define MURALHA_CUSTO 40
+#define MURALHA_MAX   5
+
+static void acao_recrutar(Reino *r) {
+    char buf[180];
+    snprintf(buf, sizeof(buf), "Cada soldado exige 1 habitante e %d moedas para equipar. "
+             "Voce tem %d moedas e %d habitantes. Soldados atuais: %d.",
+             SOLDADO_CUSTO, r->ouro, r->populacao, r->soldados);
+    ui_msg(buf);
+    int q = ler_quantidade("Quantos soldados deseja recrutar?");
+    if (q <= 0) { ui_msg("Recrutamento cancelado."); return; }
+    int max_ouro = r->ouro / SOLDADO_CUSTO;
+    int max_pop  = r->populacao - 20;       /* deixa gente para a lavoura */
+    if (max_pop < 0) max_pop = 0;
+    if (q > max_ouro) q = max_ouro;
+    if (q > max_pop)  q = max_pop;
+    if (q <= 0) { ui_msg("Recursos ou populacao insuficientes para recrutar."); return; }
+    r->ouro      -= q * SOLDADO_CUSTO;
+    r->populacao -= q;
+    r->soldados  += q;
+    snprintf(buf, sizeof(buf), "Recrutados %d soldados. Exercito: %d. Populacao: %d. "
+             "Lembre-se: soldados tambem comem do celeiro no inverno.", q, r->soldados, r->populacao);
+    ui_msg(buf);
+}
+
+static void acao_dispensar(Reino *r) {
+    if (r->soldados <= 0) { ui_msg("Nao ha soldados para dispensar."); return; }
+    int q = ler_quantidade("Quantos soldados deseja dispensar de volta a lavoura?");
+    if (q <= 0) { ui_msg("Nenhum soldado dispensado."); return; }
+    if (q > r->soldados) q = r->soldados;
+    r->soldados  -= q;
+    r->populacao += q;
+    char buf[140];
+    snprintf(buf, sizeof(buf), "Dispensados %d soldados. Exercito: %d. Populacao: %d.", q, r->soldados, r->populacao);
+    ui_msg(buf);
+}
+
+static void acao_fortificar(Reino *r) {
+    if (r->muralhas >= MURALHA_MAX) { ui_msg("As muralhas de Avalon ja estao no maximo."); return; }
+    char buf[160];
+    snprintf(buf, sizeof(buf), "Reforcar as muralhas custa %d moedas. Voce tem %d. Nivel atual: %d de %d.",
+             MURALHA_CUSTO, r->ouro, r->muralhas, MURALHA_MAX);
+    ui_msg(buf);
+    if (r->ouro < MURALHA_CUSTO) { ui_msg("Ouro insuficiente para a obra."); return; }
+    if (!entrada_confirmar("Iniciar a obra das muralhas?")) { ui_msg("Obra adiada."); return; }
+    r->ouro     -= MURALHA_CUSTO;
+    r->muralhas += 1;
+    snprintf(buf, sizeof(buf), "As muralhas sao reforcadas. Nivel de fortificacao: %d. A defesa de Avalon esta mais forte.", r->muralhas);
+    ui_msg(buf);
+}
+
+/* ================================================================
+   MENU DE GESTAO
+   ================================================================ */
+static void mostrar_menu_acoes(void) {
+    ui_prompt_menu("O que o rei deseja fazer nesta estacao?");
+    ui_opcao(1, "Ajustar os impostos");
+    ui_opcao(2, "Comprar gado");
+    ui_opcao(3, "Vender gado");
+    ui_opcao(4, "Abater gado para comida");
+    ui_opcao(5, "Roçar novos campos");
+    ui_opcao(6, "Comprar comida no mercado");
+    ui_opcao(7, "Vender comida no mercado");
+    ui_opcao(8, "Rever a situacao do reino");
+    if (g_reino.fase_drakmar >= 1) {
+        ui_opcao(9, "Recrutar soldados");
+        ui_opcao(10, "Reforcar as muralhas");
+        ui_opcao(11, "Dispensar soldados");
+    }
+    ui_opcao(0, "Avancar para a proxima estacao");
+    ui_falar_opcoes();
+}
+
+/* Retorna 1 se um comando global foi tratado. */
+static int processar_global(const char *cmd) {
     if (!strcmp(cmd, "ajuda")) {
-        ui_ajuda(); return 1;
-    }
-    if (!strcmp(cmd, "status")) {
-        jogador_mostrar_status(&g_jogador); return 1;
-    }
-    if (!strcmp(cmd, "inventario") || !strcmp(cmd, "inv")) {
-        inventario_mostrar(&g_inventario); return 1;
-    }
-    if (!strcmp(cmd, "examinar")) {
-        inventario_examinar_todos(&g_inventario); return 1;
-    }
-    if (!strcmp(cmd, "repetir")) {
-        ui_repetir(); return 1;
-    }
-    if (!strcmp(cmd, "opcoes")) {
-        ui_opcoes_globais(); return 1;
-    }
-    if (!strcmp(cmd, "salvar")) {
-        salvar_jogo(&g_jogador, &g_inventario); return 1;
-    }
-    if (!strcmp(cmd, "carregar")) {
-        if (entrada_confirmar("Carregar jogo salvo? O progresso atual nao salvo sera perdido.")) {
-            jogador_inicializar(&g_jogador, "");
-            inventario_inicializar(&g_inventario);
-            if (carregar_jogo(&g_jogador, &g_inventario))
-                local_mostrar();
-        }
+        ui_msg("Comandos: digite o numero da acao, ou as palavras situacao, opcoes, repetir, "
+               "salvar, audio, sair. As acoes de mercado pedem uma quantidade em seguida.");
         return 1;
     }
+    if (!strcmp(cmd, "situacao") || !strcmp(cmd, "status") || !strcmp(cmd, "conselho")) {
+        mostrar_relatorio(&g_reino); return 1;
+    }
+    if (!strcmp(cmd, "opcoes")) { ui_opcoes_globais(); return 1; }
+    if (!strcmp(cmd, "repetir")) { ui_repetir(); return 1; }
+    if (!strcmp(cmd, "salvar")) { salvar_reino(&g_reino); return 1; }
     if (!strcmp(cmd, "audio")) {
         g_audio_ativado = !g_audio_ativado;
-        printf("Narração por voz: %s\n", g_audio_ativado ? "ATIVADA" : "DESATIVADA");
+        printf("Narracao por voz: %s\n", g_audio_ativado ? "ATIVADA" : "DESATIVADA");
         return 1;
     }
     if (!strcmp(cmd, "sair")) {
-        if (entrada_confirmar("Deseja realmente sair do jogo? O progresso não salvo será perdido.")) {
-            printf("Saindo do jogo. Até a próxima, Majestade.\n");
+        if (entrada_confirmar("Deseja realmente sair? O progresso nao salvo sera perdido.")) {
+            printf("Ate a proxima, Majestade.\n");
             exit(0);
         }
         return 1;
@@ -165,114 +332,195 @@ int jogo_processar_global(const char *cmd) {
     return 0;
 }
 
-static void loop_jogo(void) {
-    char cmd[CMD_MAX];
-    local_mostrar();
+/* Processa uma estacao inteira: relatorio, acoes ate avancar, e a simulacao.
+   Retorna quando o jogador escolhe avancar a estacao. */
+static void jogar_estacao(void) {
+    eventos_talvez(&g_reino);
+    mostrar_relatorio(&g_reino);
+    mostrar_menu_acoes();
 
-    while (!jogo_verificar_fim()) {
+    char cmd[CMD_MAX];
+    for (;;) {
         entrada_ler(cmd, CMD_MAX);
         entrada_normalizar(cmd);
-
         if (cmd[0] == '\0') continue;
-        if (jogo_processar_global(cmd)) continue;
+        if (processar_global(cmd)) continue;
 
-        Local anterior = g_jogador.local_atual;
-        local_processar(cmd);
-
-        if (g_jogador.local_atual != anterior && !g_jogador.jogo_encerrado)
-            local_mostrar();
+        int n = entrada_eh_numero(cmd) ? atoi(cmd) : -1;
+        switch (n) {
+            case 1: acao_impostos(&g_reino); break;
+            case 2: acao_comprar_gado(&g_reino); break;
+            case 3: acao_vender_gado(&g_reino); break;
+            case 4: acao_abater_gado(&g_reino); break;
+            case 5: acao_rocar_campo(&g_reino); break;
+            case 6: acao_comprar_comida(&g_reino); break;
+            case 7: acao_vender_comida(&g_reino); break;
+            case 8: mostrar_relatorio(&g_reino); break;
+            case 9: acao_recrutar(&g_reino); break;
+            case 10: acao_fortificar(&g_reino); break;
+            case 11: acao_dispensar(&g_reino); break;
+            case 0: {
+                int ano_antes = g_reino.ano;
+                reino_avancar_estacao(&g_reino);
+                if (g_reino.ano != ano_antes)
+                    drakmar_inicio_de_ano(&g_reino);
+                return;
+            }
+            default:
+                ui_erro("Acao invalida. Digite um numero do menu ou 'opcoes' para ouvi-las de novo.");
+        }
     }
-
-    mostrar_final();
 }
 
+static int verificar_fim(void) {
+    if (g_reino.jogo_encerrado) return 1;
+    if (g_reino.populacao <= 0) {
+        g_reino.jogo_encerrado = 1;
+        g_reino.final_obtido   = 5;   /* colapso por despovoamento */
+        return 1;
+    }
+    return 0;
+}
+
+static void mostrar_final(const Reino *r) {
+    ui_separador();
+    switch (r->final_obtido) {
+        case 1:
+            ui_titulo("FIM - TRIUNFO MILITAR");
+            ui_narrar("As muralhas de Avalon resistem e o exercito de Drakmar e repelido com "
+                      "pesadas perdas. O Rei Malachar recua e pede tregua. Avalon sobrevive pela "
+                      "forca das armas que voce teve a sabedoria de preparar a tempo.");
+            break;
+        case 2:
+            ui_titulo("FIM - A IDADE DE OURO DE AVALON");
+            ui_narrar("Avalon nao apenas repele Drakmar como sai da guerra forte e prospera. "
+                      "Celeiros cheios, povo numeroso e cofres fartos: o reino que voce construiu "
+                      "ao longo dos anos resistiu a maior das provacoes. Seu reinado sera lembrado "
+                      "como a idade de ouro de Avalon.");
+            break;
+        case 3:
+            ui_titulo("FIM - O REINO VASSALO");
+            ui_narrar("Avalon vive, mas curvada sob o jugo de Drakmar. A coroa pesou demais para "
+                      "ser defendida, e a independencia foi o preco da sobrevivencia.");
+            break;
+        case 4:
+            ui_titulo("FIM - A QUEDA DE AVALON");
+            ui_narrar("As muralhas cedem e as tropas de Drakmar tomam o reino. O que voce construiu "
+                      "passa para as maos do inimigo. Faltou preparo para a hora decisiva.");
+            break;
+        case 5:
+            ui_titulo("FIM - O REINO DESPOVOADO");
+            ui_narrar("Avalon esvaziou-se. Sem povo para lavrar a terra, o reino deixou de existir. "
+                      "A fome e a ma gestao fizeram o que nenhum exercito conseguiria.");
+            break;
+        default:
+            ui_titulo("FIM");
+            ui_narrar("O reinado chega ao fim.");
+    }
+    char buf[200];
+    snprintf(buf, sizeof(buf),
+        "Reinado encerrado no ano %d. Populacao final: %d. Ouro: %d. Gado: %d. Campos: %d.",
+        r->ano, r->populacao, r->ouro, r->gado, r->campos);
+    ui_msg(buf);
+    ui_separador();
+}
+
+/* ================================================================
+   PARTIDA
+   ================================================================ */
 static void novo_jogo(void) {
     char nome[NOME_MAX];
-    if (g_audio_ativado) tts_speak("Qual é o seu nome, Majestade?");
-    printf("\nQual é o seu nome, Majestade? ");
+    falar("Qual e o seu nome, Majestade?");
+    printf("\nQual e o seu nome, Majestade? ");
     fflush(stdout);
-    if (!fgets(nome, NOME_MAX, stdin)) strcpy(nome, "Sem Nome");
+    if (!fgets(nome, NOME_MAX, stdin)) strcpy(nome, "Avalon");
     int len = (int)strlen(nome);
     if (len > 0 && nome[len-1] == '\n') nome[len-1] = '\0';
     if (nome[0] == '\0') strcpy(nome, "Avalon");
 
-    jogador_inicializar(&g_jogador, nome);
-    inventario_inicializar(&g_inventario);
+    reino_inicializar(&g_reino, nome);
+    g_reino.clima = utils_rand(60, 140);
 
-    mostrar_intro_novo_jogo();
-    ui_msg("Dica: Digite 'ajuda' a qualquer momento para ver os comandos disponíveis.\n");
-    loop_jogo();
+    ui_titulo("O PESO DA COROA");
+    ui_narrar(
+        "Vossa Majestade assume o trono de Avalon, um reino agrario de campos verdes e "
+        "rebanhos fartos. Cabe ao rei zelar pelo povo: plantar, criar gado, encher o celeiro "
+        "e governar com sabedoria estacao apos estacao. Os anos de paz sao seus para construir "
+        "um reino prospero. Que tipo de soberano voce sera?");
+    ui_msg("Dica: digite 'ajuda' a qualquer momento para ver os comandos.");
+
+    while (!verificar_fim())
+        jogar_estacao();
+    mostrar_final(&g_reino);
 }
 
 static void carregar_e_continuar(void) {
-    jogador_inicializar(&g_jogador, "");
-    inventario_inicializar(&g_inventario);
-    if (carregar_jogo(&g_jogador, &g_inventario))
-        loop_jogo();
-    else
+    if (carregar_reino(&g_reino)) {
+        while (!verificar_fim())
+            jogar_estacao();
+        mostrar_final(&g_reino);
+    } else {
         printf("Retornando ao menu principal.\n");
+    }
 }
 
 static void perguntar_audio(void) {
     printf("\nNARRACAO POR VOZ\n\n");
     printf("Deseja ativar a narracao por voz?\n");
     printf("  1 - Sim, ativar narracao\n");
-    printf("  2 - Nao, jogar sem audio\n");
-    printf("\n> ");
+    printf("  2 - Nao, jogar sem audio\n\n> ");
     fflush(stdout);
-    tts_speak(
-        "Deseja ativar a narracao por voz? "
-        "Digite 1 para sim, ativar a narracao. "
-        "Digite 2 para nao, jogar sem audio."
-    );
+    tts_speak("Deseja ativar a narracao por voz? Digite 1 para sim, ou 2 para nao.");
     char buf[16];
     if (!fgets(buf, sizeof(buf), stdin)) return;
     if (buf[0] == '2') {
         g_audio_ativado = 0;
-        printf("\nNarração desativada. Você pode ativar a qualquer momento digitando 'audio'.\n\n");
+        printf("\nNarracao desativada. Ative quando quiser digitando 'audio'.\n\n");
     } else {
         g_audio_ativado = 1;
-        tts_speak("Narração ativada. Bem-vindo a O Peso da Coroa.");
-        printf("\nNarração ativada.\n\n");
+        tts_speak("Narracao ativada. Bem-vindo a O Peso da Coroa.");
+        printf("\nNarracao ativada.\n\n");
     }
 }
 
 void jogo_iniciar(void) {
+    utils_semear();
     if (!audio_disponivel()) {
         g_audio_ativado = 0;
         printf("Arquivos de audio nao encontrados. Narracao por voz desativada.\n");
-        printf("O jogo funcionara normalmente sem audio.\n\n");
+        printf("O jogo funciona normalmente sem audio.\n\n");
     } else {
         perguntar_audio();
     }
 
     while (1) {
-        ui_titulo("O PESO DA COROA - RPG Textual");
-        ui_narrar("Bem-vindo a O Peso da Coroa, um RPG textual sobre governar um reino em crise.");
-        printf("\n");
+        ui_titulo("O PESO DA COROA - Reino de Avalon");
+        ui_narrar("Um jogo de governar um reino: cuide do povo, da terra e do gado, "
+                  "estacao apos estacao.");
         ui_limpar_opcoes();
-        ui_opcao(1, "Novo jogo");
-        ui_opcao(2, "Carregar jogo salvo");
+        ui_opcao(1, "Novo reinado");
+        ui_opcao(2, "Carregar reino salvo");
         ui_opcao(3, "Ajuda");
         ui_opcao(0, "Sair");
-        printf("\n");
         ui_falar_opcoes();
 
         char cmd[CMD_MAX];
         entrada_ler(cmd, CMD_MAX);
         entrada_normalizar(cmd);
 
-        if (!strcmp(cmd,"1") || !strcmp(cmd,"novo") || strstr(cmd,"novo")) {
+        if (!strcmp(cmd, "1") || strstr(cmd, "novo")) {
             novo_jogo();
-        } else if (!strcmp(cmd,"2") || !strcmp(cmd,"carregar")) {
+        } else if (!strcmp(cmd, "2") || strstr(cmd, "carregar")) {
             carregar_e_continuar();
-        } else if (!strcmp(cmd,"3") || !strcmp(cmd,"ajuda")) {
-            ui_ajuda();
-        } else if (!strcmp(cmd,"0") || !strcmp(cmd,"sair")) {
-            printf("Até logo!\n");
+        } else if (!strcmp(cmd, "3") || !strcmp(cmd, "ajuda")) {
+            ui_msg("Em cada estacao voce ve o estado do reino e escolhe acoes pelo numero. "
+                   "Encha o celeiro antes do inverno, equilibre os impostos para o povo crescer, "
+                   "e use o gado como reserva. Avance as estacoes para o reino prosperar.");
+        } else if (!strcmp(cmd, "0") || !strcmp(cmd, "sair")) {
+            printf("Ate logo!\n");
             break;
         } else {
-            ui_erro("Opção inválida. Digite 1, 2, 3 ou 0.");
+            ui_erro("Opcao invalida. Digite 1, 2, 3 ou 0.");
         }
     }
 }

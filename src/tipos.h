@@ -2,28 +2,14 @@
 #define TIPOS_H
 
 #define NOME_MAX  64
-#define DESC_MAX  512
 #define CMD_MAX   256
-#define MAX_ITENS 10
 
 typedef enum {
-    LOCAL_SALA_TRONO = 0,
-    LOCAL_MASMORRA,
-    LOCAL_MERCADO,
-    LOCAL_MURALHAS,
-    LOCAL_BIBLIOTECA,
-    LOCAL_JARDINS,
-    LOCAL_VILA,
-    LOCAL_TOTAL
-} Local;
-
-typedef enum {
-    ITEM_ESPADA_REAL = 0,
-    ITEM_PERGAMINHO,
-    ITEM_CHAVE_MASMORRA,
-    ITEM_ANEL_ALIANCA,
-    ITEM_OURO_EXTRA,
-    ITEM_TOTAL
-} TipoItem;
+    EST_PRIMAVERA = 0,
+    EST_VERAO,
+    EST_OUTONO,
+    EST_INVERNO,
+    EST_TOTAL
+} Estacao;
 
 #endif

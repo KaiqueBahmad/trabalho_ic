@@ -1,2 +1,7 @@
 piper/
 main.exe
+main
+mingw64/
+mingit/
+piper_out.wav
+piper_in.txt

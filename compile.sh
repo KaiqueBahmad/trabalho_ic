@@ -56,8 +56,8 @@ fi
 
 echo ""
 echo "Compilando..."
-gcc main.c src/audio.c src/jogador.c src/inventario.c src/entrada.c \
-    src/ui.c src/salvamento.c src/npcs.c src/locais.c src/jogo.c src/utils.c \
+gcc main.c src/audio.c src/entrada.c src/ui.c src/salvamento.c \
+    src/utils.c src/reino.c src/eventos.c src/jogo.c \
     -I. -o main $COMPILE_FLAGS
 
 echo "Compilacao concluida. Execute ./main para jogar."

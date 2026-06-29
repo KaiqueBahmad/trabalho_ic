@@ -1,4 +1,19 @@
 #include "utils.h"
+#include <stdlib.h>
+#include <time.h>
+
+void utils_semear(void) {
+    srand((unsigned int)time(NULL));
+}
+
+int utils_rand(int min, int max) {
+    if (max <= min) return min;
+    return min + rand() % (max - min + 1);
+}
+
+int utils_chance(int percentual) {
+    return (rand() % 100) < percentual;
+}
 
 SistemaOperacional utils_detectar_so(void) {
 #if defined(_WIN32) || defined(_WIN64)
