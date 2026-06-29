@@ -1,5 +1,4 @@
 #include "audio.h"
-#include "entrada.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -19,6 +18,11 @@
 
 #define TEMP_WAV    "piper_out.wav"
 #define PIPER_MODEL "models/pt_BR-faber-medium.onnx"
+
+/* Sinalizador de "pular narracao". O ESC durante a fala o ativa, fazendo as
+   narracoes restantes do prompt atual serem ignoradas. A leitura de entrada
+   o zera a cada novo prompt (ver entrada_ler_linha). */
+int g_pular_narracao = 0;
 
 /* ================================================================
    REPRODUCAO INTERROMPIVEL
@@ -42,19 +46,20 @@ static void play_wav(const char *path) {
         if (strncmp(ret, "playing", 7) != 0) break;   /* terminou */
         if (_kbhit()) {
             int c = _getch();
-            if (c == 27) {                              /* ESC: pular */
+            if (c == 27) {                              /* ESC: pular o resto */
+                g_pular_narracao = 1;
                 mciSendStringA("stop coroasnd", NULL, 0, NULL);
                 break;
             } else if (c == 0 || c == 0xE0) {
                 _getch();                               /* descarta tecla especial */
-            } else {
-                if (c == '\r') c = '\n';
-                entrada_pushback_byte((char)c);         /* preserva type-ahead */
             }
+            /* outras teclas durante a fala sao ignoradas */
         }
         Sleep(30);
     }
     mciSendStringA("close coroasnd", NULL, 0, NULL);
+    /* limpa o que tenha sido digitado durante a fala, evitando dessincronia */
+    FlushConsoleInputBuffer(GetStdHandle(STD_INPUT_HANDLE));
 }
 #else
 static void montar_comando(char *cmd, size_t n, const char *path) {
@@ -103,22 +108,26 @@ static void play_wav(const char *path) {
         struct timeval tv = {0, 30000};                     /* 30 ms */
         if (select(STDIN_FILENO + 1, &fds, NULL, NULL, &tv) > 0) {
             unsigned char c;
-            if (read(STDIN_FILENO, &c, 1) == 1) {
-                if (c == 27) {                           /* ESC: pular */
-                    kill(pid, SIGTERM);
-                    waitpid(pid, &status, 0);
-                    break;
-                }
-                entrada_pushback_byte((char)c);          /* preserva type-ahead */
+            if (read(STDIN_FILENO, &c, 1) == 1 && c == 27) { /* ESC: pular o resto */
+                g_pular_narracao = 1;
+                kill(pid, SIGTERM);
+                waitpid(pid, &status, 0);
+                break;
             }
+            /* outras teclas durante a fala sao ignoradas */
         }
     }
 
+    /* limpa o que tenha sido digitado durante a fala, evitando dessincronia */
+    tcflush(STDIN_FILENO, TCIFLUSH);
     tcsetattr(STDIN_FILENO, TCSANOW, &velho);
 }
 #endif
 
 void tts_speak(const char *text) {
+    /* se o jogador pediu para pular, ignora as narracoes restantes do prompt */
+    if (g_pular_narracao) return;
+
     FILE *f = fopen("piper_in.txt", "w");
     if (!f) { fprintf(stderr, "Erro ao criar arquivo de texto\n"); return; }
     fputs(text, f);
