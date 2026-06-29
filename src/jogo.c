@@ -393,6 +393,9 @@ static int processar_global(const char *cmd) {
     }
     if (!strcmp(cmd, "guia") || !strcmp(cmd, "manual") || !strcmp(cmd, "regras") || !strcmp(cmd, "dicas")) {
         mostrar_guia();
+        /* o guia usa o mesmo buffer de opcoes do menu da estacao; ao sair,
+           re-exibe o menu para o jogador nao confundir as duas listas */
+        mostrar_menu_acoes();
         return 1;
     }
     if (!strcmp(cmd, "situacao") || !strcmp(cmd, "status") || !strcmp(cmd, "conselho")) {
