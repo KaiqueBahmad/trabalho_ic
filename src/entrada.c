@@ -41,6 +41,47 @@ static void remover_acentos(char *s) {
     *w = '\0';
 }
 
+/* Buffer de teclas adiantadas durante a narracao. */
+static char g_pend[1024];
+static int  g_pend_head = 0, g_pend_len = 0;
+
+void entrada_pushback_byte(char c) {
+    if (g_pend_len < (int)sizeof(g_pend))
+        g_pend[g_pend_len++] = c;
+}
+
+static void pend_compactar(void) {
+    int rest = g_pend_len - g_pend_head;
+    if (rest > 0 && g_pend_head > 0) memmove(g_pend, g_pend + g_pend_head, rest);
+    g_pend_len  = rest > 0 ? rest : 0;
+    g_pend_head = 0;
+}
+
+int entrada_ler_linha(char *buf, int size) {
+    int pos = 0;
+    /* primeiro consome o que o jogador adiantou enquanto a narracao tocava */
+    while (g_pend_head < g_pend_len) {
+        char c = g_pend[g_pend_head++];
+        if (c == '\n' || c == '\r') {
+            buf[pos] = '\0';
+            pend_compactar();
+            return 1;
+        }
+        if (pos < size - 1) buf[pos++] = c;
+    }
+    g_pend_head = g_pend_len = 0;   /* esvaziado sem fim de linha */
+
+    /* completa a linha lendo do teclado */
+    if (fgets(buf + pos, size - pos, stdin)) {
+        int len = (int)strlen(buf);
+        if (len > 0 && buf[len - 1] == '\n') buf[len - 1] = '\0';
+        return 1;
+    }
+    if (pos > 0) { buf[pos] = '\0'; return 1; }
+    buf[0] = '\0';
+    return 0;
+}
+
 void entrada_ler(char *buf, int size) {
     extern int g_audio_ativado;
 #ifdef _WIN32
@@ -48,9 +89,9 @@ void entrada_ler(char *buf, int size) {
 #endif
     printf("> ");
     fflush(stdout);
-    if (!fgets(buf, size, stdin)) { buf[0] = '\0'; if (feof(stdin)) exit(0); return; }
-    int len = (int)strlen(buf);
-    if (len > 0 && buf[len - 1] == '\n') buf[len - 1] = '\0';
+    if (!entrada_ler_linha(buf, size)) {
+        if (feof(stdin)) exit(0);
+    }
 }
 
 void entrada_normalizar(char *buf) {

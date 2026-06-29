@@ -520,9 +520,7 @@ static void novo_jogo(void) {
     falar("Qual é o seu nome, Majestade?");
     printf("\nQual é o seu nome, Majestade? ");
     fflush(stdout);
-    if (!fgets(nome, NOME_MAX, stdin)) strcpy(nome, "Avalon");
-    int len = (int)strlen(nome);
-    if (len > 0 && nome[len-1] == '\n') nome[len-1] = '\0';
+    if (!entrada_ler_linha(nome, NOME_MAX)) strcpy(nome, "Avalon");
     if (nome[0] == '\0') strcpy(nome, "Avalon");
 
     reino_inicializar(&g_reino, nome);
@@ -559,7 +557,7 @@ static void perguntar_audio(void) {
     fflush(stdout);
     tts_speak("Deseja ativar a narração por voz? Digite 1 para sim, ou 2 para não.");
     char buf[16];
-    if (!fgets(buf, sizeof(buf), stdin)) return;
+    if (!entrada_ler_linha(buf, sizeof(buf))) return;
     if (buf[0] == '2') {
         g_audio_ativado = 0;
         printf("\nNarração desativada. Ative quando quiser digitando 'audio'.\n\n");

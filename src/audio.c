@@ -1,4 +1,5 @@
 #include "audio.h"
+#include "entrada.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -44,6 +45,11 @@ static void play_wav(const char *path) {
             if (c == 27) {                              /* ESC: pular */
                 mciSendStringA("stop coroasnd", NULL, 0, NULL);
                 break;
+            } else if (c == 0 || c == 0xE0) {
+                _getch();                               /* descarta tecla especial */
+            } else {
+                if (c == '\r') c = '\n';
+                entrada_pushback_byte((char)c);         /* preserva type-ahead */
             }
         }
         Sleep(30);
@@ -97,10 +103,13 @@ static void play_wav(const char *path) {
         struct timeval tv = {0, 30000};                     /* 30 ms */
         if (select(STDIN_FILENO + 1, &fds, NULL, NULL, &tv) > 0) {
             unsigned char c;
-            if (read(STDIN_FILENO, &c, 1) == 1 && c == 27) { /* ESC: pular */
-                kill(pid, SIGTERM);
-                waitpid(pid, &status, 0);
-                break;
+            if (read(STDIN_FILENO, &c, 1) == 1) {
+                if (c == 27) {                           /* ESC: pular */
+                    kill(pid, SIGTERM);
+                    waitpid(pid, &status, 0);
+                    break;
+                }
+                entrada_pushback_byte((char)c);          /* preserva type-ahead */
             }
         }
     }
