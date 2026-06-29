@@ -385,11 +385,11 @@ static void mostrar_guia(void) {
 /* Retorna 1 se um comando global foi tratado. */
 static int processar_global(const char *cmd) {
     if (!strcmp(cmd, "ajuda")) {
-        ui_msg("Comandos: digite o número da ação, ou as palavras situação, opções, repetir, "
-               "salvar, áudio, velocidade, sair. As ações de mercado pedem uma quantidade em seguida. "
-               "Digite guia para entender as regras do reino. "
-               "Com a narração ligada, aperte ESC para pular a fala atual, e digite "
-               "velocidade para deixar a narração mais rápida.");
+        ui_msg("Comandos a qualquer momento: guia, que explica as regras do reino; "
+               "situação; opções; repetir; salvar; áudio; velocidade, que acelera a "
+               "narração; e sair. Digite o número da ação ou o nome dela. As ações de "
+               "mercado pedem uma quantidade em seguida. Com a narração ligada, aperte "
+               "ESC para pular a fala atual.");
         return 1;
     }
     if (!strcmp(cmd, "guia") || !strcmp(cmd, "manual") || !strcmp(cmd, "regras") || !strcmp(cmd, "dicas")) {
@@ -595,7 +595,6 @@ void jogo_iniciar(void) {
         ui_limpar_opcoes();
         ui_opcao(1, "Novo reinado");
         ui_opcao(2, "Carregar reino salvo");
-        ui_opcao(3, "Ajuda");
         ui_opcao(0, "Sair");
         ui_falar_opcoes();
 
@@ -607,14 +606,11 @@ void jogo_iniciar(void) {
             novo_jogo();
         } else if (!strcmp(cmd, "2") || strstr(cmd, "carregar")) {
             carregar_e_continuar();
-        } else if (!strcmp(cmd, "3") || !strcmp(cmd, "ajuda")) {
-            ui_msg("Em cada estação você vê o estado do reino e escolhe ações pelo número. "
-                   "Encha o celeiro antes do inverno, equilibre os impostos para o povo crescer, "
-                   "e use o gado como reserva. Avance as estações para o reino prosperar.");
-            mostrar_guia();
         } else if (!strcmp(cmd, "0") || !strcmp(cmd, "sair")) {
             printf("Até logo!\n");
             break;
+        } else if (!strcmp(cmd, "ajuda") || !strcmp(cmd, "guia")) {
+            mostrar_guia();
         } else if (!strcmp(cmd, "velocidade") || !strcmp(cmd, "vel")) {
             audio_proxima_velocidade();
             salvar_config();
@@ -625,7 +621,7 @@ void jogo_iniciar(void) {
             g_audio_ativado = !g_audio_ativado;
             printf("Narração por voz: %s\n", g_audio_ativado ? "ATIVADA" : "DESATIVADA");
         } else {
-            ui_erro("Opção inválida. Digite 1, 2, 3 ou 0.");
+            ui_erro("Opção inválida. Digite 1, 2 ou 0.");
         }
     }
 }
