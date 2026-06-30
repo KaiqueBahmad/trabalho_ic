@@ -591,8 +591,7 @@ void jogo_iniciar(void) {
 
     while (1) {
         ui_titulo("O Peso da Coroa - Reino de Avalon");
-        ui_narrar("Um jogo de governar um reino: cuide do povo, da terra e do gado, "
-                  "estação após estação.");
+        ui_narrar("Um jogo sobre governar um reino: cuide do povo, da terra, do gado e não seja conquistado.");
         ui_limpar_opcoes();
         ui_opcao(1, "Novo reinado");
         ui_opcao(2, "Carregar reino salvo");
