@@ -19,17 +19,23 @@ typedef struct {
 
     int clima;             /* qualidade do ano para a lavoura, em % (100 = normal) */
 
-    /* arco de Drakmar */
-    int soldados;          /* exercito */
-    int muralhas;          /* nivel de fortificacao */
-    int fase_drakmar;      /* 0 paz, 1 rumores, 2 tributo, 3 guerra */
-    int ameaca;            /* forca de Drakmar */
-    int tributos_pagos;    /* quantas vezes cedeu ao tributo */
+    /* militar */
+    int soldados;          /* exercito (so do jogador pode mobilizar para atacar) */
+    int muralha_nivel;     /* nivel de fortificacao (0 a MURALHA_MAX) */
+    int muralha_vida;      /* pontos de vida atuais da muralha */
+
+    /* economia de minas */
+    int minas;             /* quantas minas o reino construiu */
 
     /* controle */
     int jogo_encerrado;
     int final_obtido;      /* 0 nenhum; ver jogo.c */
 } Reino;
+
+/* ---- muralhas: vida defensiva por nivel ---- */
+#define MURALHA_MAX 5
+/* Pontos de vida totais de uma muralha no nivel dado (0 se sem muralha). */
+int reino_muralha_vida_max(int nivel);
 
 void reino_inicializar(Reino *r, const char *nome);
 

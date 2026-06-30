@@ -61,7 +61,7 @@ if %errorlevel%==0 (
 echo.
 
 echo Compilando...
-"%GCC_CMD%" main.c src/audio.c src/entrada.c src/ui.c src/salvamento.c src/utils.c src/reino.c src/eventos.c src/jogo.c -I. -o main.exe -lwinmm
+"%GCC_CMD%" main.c src/audio.c src/entrada.c src/ui.c src/salvamento.c src/utils.c src/reino.c src/eventos.c src/mundo.c src/jogo.c -I. -o main.exe -lwinmm
 if errorlevel 1 (
     echo Erro na compilacao.
     exit /b 1

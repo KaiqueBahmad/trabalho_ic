@@ -11,24 +11,33 @@
 #define PASTO_POR_CAMPO    5    /* cabecas de gado que cada campo sustenta */
 #define REPRODUCAO_GADO    25   /* crescimento natural do rebanho por ano, em % */
 #define IMPOSTO_NEUTRO     15   /* abaixo disso, atrai gente; acima, afugenta */
+#define MINA_RENDA_MAX     22   /* ouro maximo que uma mina rende por estacao */
+#define MINA_CHANCE        70   /* chance de uma mina render algo na estacao */
 
 void reino_inicializar(Reino *r, const char *nome) {
     memset(r, 0, sizeof(Reino));
     strncpy(r->nome, nome, NOME_MAX - 1);
-    r->ano       = 1;
-    r->estacao   = EST_PRIMAVERA;
-    r->populacao = 120;
-    r->comida    = 240;
-    r->gado      = 20;
-    r->campos    = 10;
-    r->ouro      = 150;
-    r->imposto   = 15;
-    r->clima     = 100;
-    r->soldados  = 0;
-    r->muralhas  = 0;
-    r->fase_drakmar = 0;
-    r->ameaca    = 0;
-    r->tributos_pagos = 0;
+    r->ano          = 1;
+    r->estacao      = EST_PRIMAVERA;
+    r->populacao    = 120;
+    r->comida       = 240;
+    r->gado         = 20;
+    r->campos       = 10;
+    r->ouro         = 150;
+    r->imposto      = 15;
+    r->clima        = 100;
+    r->soldados     = 15;                 /* guarnicao inicial */
+    r->muralha_nivel = 1;
+    r->muralha_vida  = reino_muralha_vida_max(1);
+    r->minas        = 0;
+}
+
+int reino_muralha_vida_max(int nivel) {
+    /* niveis: 1->40, 2->100, 3->180, 4->280, 5->400 (incrementos 40,60,80,100,120) */
+    static const int tabela[MURALHA_MAX + 1] = { 0, 40, 100, 180, 280, 400 };
+    if (nivel < 0) nivel = 0;
+    if (nivel > MURALHA_MAX) nivel = MURALHA_MAX;
+    return tabela[nivel];
 }
 
 const char *reino_nome_estacao(Estacao e) {
@@ -118,15 +127,6 @@ static void processar_inverno(Reino *r) {
         ui_narrar(buf);
     }
 
-    /* impostos do ano */
-    int receita = r->populacao * r->imposto / 100 * 2;
-    r->ouro += receita;
-    {
-        char buf[140];
-        snprintf(buf, sizeof(buf), "Os impostos do ano renderam %d moedas de ouro. Tesouro: %d.", receita, r->ouro);
-        ui_msg(buf);
-    }
-
     /* movimento da populacao: nascimentos, imigracao e emigracao */
     int nascimentos = 0, imigrantes = 0, emigrantes = 0;
     if (mortes_fome == 0) {
@@ -151,6 +151,32 @@ static void processar_inverno(Reino *r) {
     }
 }
 
+/* Impostos recolhidos toda estacao. */
+static void processar_impostos(Reino *r) {
+    int receita = r->populacao * r->imposto / 100;
+    r->ouro += receita;
+    char buf[140];
+    snprintf(buf, sizeof(buf), "Os impostos da estação renderam %d moedas de ouro. Tesouro: %d.", receita, r->ouro);
+    ui_msg(buf);
+}
+
+/* Rendimento das minas, apurado ao fim de cada estacao. */
+static void processar_minas(Reino *r) {
+    if (r->minas <= 0) return;
+    int total = 0;
+    for (int i = 0; i < r->minas; i++)
+        if (utils_chance(MINA_CHANCE))
+            total += utils_rand(1, MINA_RENDA_MAX);
+    r->ouro += total;
+    char buf[160];
+    if (total > 0)
+        snprintf(buf, sizeof(buf), "As %d minas do reino renderam %d moedas em ouro nesta estação. Tesouro: %d.",
+                 r->minas, total, r->ouro);
+    else
+        snprintf(buf, sizeof(buf), "As %d minas nada renderam nesta estação. A veia de ouro andou escassa.", r->minas);
+    ui_msg(buf);
+}
+
 void reino_avancar_estacao(Reino *r) {
     switch (r->estacao) {
         case EST_PRIMAVERA: processar_primavera(r); break;
@@ -159,6 +185,9 @@ void reino_avancar_estacao(Reino *r) {
         case EST_INVERNO:   processar_inverno(r);   break;
         default: break;
     }
+
+    processar_impostos(r);
+    processar_minas(r);
 
     r->estacao = (Estacao)((r->estacao + 1) % EST_TOTAL);
     if (r->estacao == EST_PRIMAVERA) {

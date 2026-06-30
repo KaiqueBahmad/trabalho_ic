@@ -1,4 +1,5 @@
 #include "salvamento.h"
+#include "mundo.h"
 #include "audio.h"
 #include <stdio.h>
 #include <string.h>
@@ -8,7 +9,8 @@
 #endif
 #include <sys/stat.h>
 
-extern int g_audio_ativado;
+extern int   g_audio_ativado;
+extern Mundo g_mundo;
 
 #define SAVE_FILE   "saves/save.txt"
 #define CONFIG_FILE "saves/config.txt"
@@ -37,11 +39,20 @@ int salvar_reino(const Reino *r) {
     fprintf(f, "IMPOSTO=%d\n",       r->imposto);
     fprintf(f, "CLIMA=%d\n",         r->clima);
     fprintf(f, "SOLDADOS=%d\n",      r->soldados);
-    fprintf(f, "MURALHAS=%d\n",      r->muralhas);
-    fprintf(f, "FASE_DRAKMAR=%d\n",  r->fase_drakmar);
-    fprintf(f, "AMEACA=%d\n",        r->ameaca);
-    fprintf(f, "TRIBUTOS_PAGOS=%d\n",r->tributos_pagos);
+    fprintf(f, "MURALHA_NIVEL=%d\n", r->muralha_nivel);
+    fprintf(f, "MURALHA_VIDA=%d\n",  r->muralha_vida);
+    fprintf(f, "MINAS=%d\n",         r->minas);
     fprintf(f, "AUDIO=%d\n",         g_audio_ativado);
+
+    /* mundo: um reino rival por linha, depois o jornal */
+    for (int i = 0; i < NUM_NPCS; i++) {
+        const ReinoNPC *n = &g_mundo.npc[i];
+        fprintf(f, "NPC=%d;%d;%d;%d;%d;%d;%d;%d;%d;%s\n",
+                n->ativo, n->populacao, n->soldados, n->muralha_nivel, n->muralha_vida,
+                n->ouro, n->comida, n->gado, n->minas, n->nome);
+    }
+    for (int i = 0; i < g_mundo.jornal_n; i++)
+        fprintf(f, "JORNAL=%s\n", g_mundo.jornal[i]);
 
     fclose(f);
     printf("Reino salvo em '%s'.\n", SAVE_FILE);
@@ -55,28 +66,44 @@ int carregar_reino(Reino *r) {
         return 0;
     }
     memset(r, 0, sizeof(Reino));
+    mundo_inicializar(&g_mundo);   /* base; sobrescrita pelos dados salvos */
+    g_mundo.jornal_n = 0;
+    int npc_idx = 0;
 
     char linha[256];
     while (fgets(linha, sizeof(linha), f)) {
         char chave[64], valor[192];
         if (sscanf(linha, "%63[^=]=%191[^\n]", chave, valor) != 2) continue;
 
-        if      (!strcmp(chave, "NOME"))         strncpy(r->nome, valor, NOME_MAX - 1);
-        else if (!strcmp(chave, "ANO"))          r->ano          = atoi(valor);
-        else if (!strcmp(chave, "ESTACAO"))      r->estacao      = (Estacao)atoi(valor);
-        else if (!strcmp(chave, "POPULACAO"))    r->populacao    = atoi(valor);
-        else if (!strcmp(chave, "COMIDA"))       r->comida       = atoi(valor);
-        else if (!strcmp(chave, "GADO"))         r->gado         = atoi(valor);
-        else if (!strcmp(chave, "CAMPOS"))       r->campos       = atoi(valor);
-        else if (!strcmp(chave, "OURO"))         r->ouro         = atoi(valor);
-        else if (!strcmp(chave, "IMPOSTO"))      r->imposto      = atoi(valor);
-        else if (!strcmp(chave, "CLIMA"))        r->clima        = atoi(valor);
-        else if (!strcmp(chave, "SOLDADOS"))     r->soldados     = atoi(valor);
-        else if (!strcmp(chave, "MURALHAS"))     r->muralhas     = atoi(valor);
-        else if (!strcmp(chave, "FASE_DRAKMAR")) r->fase_drakmar = atoi(valor);
-        else if (!strcmp(chave, "AMEACA"))       r->ameaca       = atoi(valor);
-        else if (!strcmp(chave, "TRIBUTOS_PAGOS")) r->tributos_pagos = atoi(valor);
-        else if (!strcmp(chave, "AUDIO"))        g_audio_ativado = atoi(valor);
+        if (!strcmp(chave, "NPC")) {
+            if (npc_idx < NUM_NPCS) {
+                ReinoNPC *n = &g_mundo.npc[npc_idx];
+                char nome[NOME_MAX] = "";
+                sscanf(valor, "%d;%d;%d;%d;%d;%d;%d;%d;%d;%63[^\n]",
+                       &n->ativo, &n->populacao, &n->soldados, &n->muralha_nivel, &n->muralha_vida,
+                       &n->ouro, &n->comida, &n->gado, &n->minas, nome);
+                if (nome[0]) strncpy(n->nome, nome, NOME_MAX - 1);
+                npc_idx++;
+            }
+            continue;
+        }
+        if (!strcmp(chave, "JORNAL")) { mundo_jornal_add(&g_mundo, valor); continue; }
+
+        if      (!strcmp(chave, "NOME"))          strncpy(r->nome, valor, NOME_MAX - 1);
+        else if (!strcmp(chave, "ANO"))           r->ano           = atoi(valor);
+        else if (!strcmp(chave, "ESTACAO"))       r->estacao       = (Estacao)atoi(valor);
+        else if (!strcmp(chave, "POPULACAO"))     r->populacao     = atoi(valor);
+        else if (!strcmp(chave, "COMIDA"))        r->comida        = atoi(valor);
+        else if (!strcmp(chave, "GADO"))          r->gado          = atoi(valor);
+        else if (!strcmp(chave, "CAMPOS"))        r->campos        = atoi(valor);
+        else if (!strcmp(chave, "OURO"))          r->ouro          = atoi(valor);
+        else if (!strcmp(chave, "IMPOSTO"))       r->imposto       = atoi(valor);
+        else if (!strcmp(chave, "CLIMA"))         r->clima         = atoi(valor);
+        else if (!strcmp(chave, "SOLDADOS"))      r->soldados      = atoi(valor);
+        else if (!strcmp(chave, "MURALHA_NIVEL")) r->muralha_nivel = atoi(valor);
+        else if (!strcmp(chave, "MURALHA_VIDA"))  r->muralha_vida  = atoi(valor);
+        else if (!strcmp(chave, "MINAS"))         r->minas         = atoi(valor);
+        else if (!strcmp(chave, "AUDIO"))         g_audio_ativado  = atoi(valor);
     }
     fclose(f);
     if (r->ano <= 0 || r->populacao <= 0) {

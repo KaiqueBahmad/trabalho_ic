@@ -1,5 +1,6 @@
 #include "jogo.h"
 #include "reino.h"
+#include "mundo.h"
 #include "salvamento.h"
 #include "entrada.h"
 #include "ui.h"
@@ -11,6 +12,7 @@
 #include <stdlib.h>
 
 Reino g_reino;
+Mundo g_mundo;
 int   g_audio_ativado = 1;
 
 /* precos do mercado e custos das obras */
@@ -20,6 +22,11 @@ int   g_audio_ativado = 1;
 #define CAMPO_CUSTO   35
 #define COMIDA_COMPRA 2    /* ouro por medida comprada */
 #define COMIDA_VENDA  1    /* ouro por medida vendida */
+
+/* minas: cada nova mina custa mais que a anterior */
+#define MINA_BASE     120
+#define MINA_PASSO    60
+static int mina_custo(const Reino *r) { return MINA_BASE + MINA_PASSO * r->minas; }
 
 /* ================================================================
    AUDIO
@@ -64,11 +71,12 @@ static void mostrar_relatorio(const Reino *r) {
     printf("  Campos:     %d (lavráveis com a mão de obra atual: %d)\n", r->campos, trab);
     printf("  Ouro:       %d moedas no tesouro\n", r->ouro);
     printf("  Imposto:    %d por cento\n", r->imposto);
+    printf("  Minas:      %d (próxima custa %d de ouro)\n", r->minas, mina_custo(r));
     printf("  Clima:      %s\n", clima_desc(r->clima));
-    if (r->fase_drakmar >= 1) {
-        printf("  Soldados:   %d (muralhas nível %d)\n", r->soldados, r->muralhas);
-        printf("  Ameaça de Drakmar: %d\n", r->ameaca);
-    }
+    printf("  Soldados:   %d\n", r->soldados);
+    printf("  Muralha:    nível %d (vida %d de %d)\n",
+           r->muralha_nivel, r->muralha_vida, reino_muralha_vida_max(r->muralha_nivel));
+    printf("  Reinos no mapa: %d (anexe todos para vencer)\n", mundo_reinos_ativos(&g_mundo));
 
     /* aviso de planejamento */
     const char *aviso = NULL;
@@ -83,19 +91,17 @@ static void mostrar_relatorio(const Reino *r) {
     printf("\n");
 
     if (g_audio_ativado) {
-        char mil[160] = "";
-        if (r->fase_drakmar >= 1)
-            snprintf(mil, sizeof(mil),
-                "Soldados: %d. Muralhas nível %d. Ameaça de Drakmar: %d. ",
-                r->soldados, r->muralhas, r->ameaca);
-        char resumo[760];
+        char resumo[820];
         snprintf(resumo, sizeof(resumo),
             "Ano %d de reinado, %s. "
             "População: %d habitantes. Comida: %d medidas, e o inverno exige %d. "
-            "Gado: %d cabeças. Campos: %d. Ouro: %d moedas. Imposto: %d por cento. Clima: %s. %s%s",
+            "Gado: %d cabeças. Campos: %d. Ouro: %d moedas. Imposto: %d por cento. "
+            "Minas: %d. Soldados: %d. Muralha nível %d com %d de vida. "
+            "Reinos no mapa: %d. Clima: %s. %s",
             r->ano, reino_nome_estacao(r->estacao),
             r->populacao, r->comida, necessario, r->gado, r->campos, r->ouro,
-            r->imposto, clima_desc(r->clima), mil, aviso ? aviso : "");
+            r->imposto, r->minas, r->soldados, r->muralha_nivel, r->muralha_vida,
+            mundo_reinos_ativos(&g_mundo), clima_desc(r->clima), aviso ? aviso : "");
         tts_speak(resumo);
     }
 }
@@ -229,10 +235,26 @@ static void acao_vender_comida(Reino *r) {
     ui_msg(buf);
 }
 
-/* ---- acoes militares (surgem com a ameaca de Drakmar) ---- */
+/* ---- mina ---- */
+static void acao_construir_mina(Reino *r) {
+    int custo = mina_custo(r);
+    char buf[200];
+    snprintf(buf, sizeof(buf),
+        "Construir uma nova mina custa %d moedas (cada mina é mais cara que a anterior). "
+        "Você tem %d e opera %d minas. As minas rendem ouro ao fim de cada estação.",
+        custo, r->ouro, r->minas);
+    ui_msg(buf);
+    if (r->ouro < custo) { ui_msg("Ouro insuficiente para abrir a mina."); return; }
+    if (!entrada_confirmar("Iniciar a escavação da mina?")) { ui_msg("Obra adiada."); return; }
+    r->ouro  -= custo;
+    r->minas += 1;
+    snprintf(buf, sizeof(buf), "A nova mina é aberta. Minas em operação: %d. Elas renderão ouro a cada estação.", r->minas);
+    ui_msg(buf);
+}
+
+/* ---- acoes militares (no Quartel) ---- */
 #define SOLDADO_CUSTO 5
 #define MURALHA_CUSTO 40
-#define MURALHA_MAX   5
 
 static void acao_recrutar(Reino *r) {
     char buf[200];
@@ -269,17 +291,62 @@ static void acao_dispensar(Reino *r) {
 }
 
 static void acao_fortificar(Reino *r) {
-    if (r->muralhas >= MURALHA_MAX) { ui_msg("As muralhas de Avalon já estão no máximo."); return; }
-    char buf[160];
-    snprintf(buf, sizeof(buf), "Reforçar as muralhas custa %d moedas. Você tem %d. Nível atual: %d de %d.",
-             MURALHA_CUSTO, r->ouro, r->muralhas, MURALHA_MAX);
+    char buf[220];
+    int vida_max = reino_muralha_vida_max(r->muralha_nivel);
+
+    /* muralha danificada mas no maximo de nivel: oferece reparo */
+    if (r->muralha_nivel >= MURALHA_MAX) {
+        if (r->muralha_vida >= vida_max) { ui_msg("A muralha já está no nível máximo e intacta."); return; }
+        snprintf(buf, sizeof(buf), "A muralha está no nível máximo, mas danificada (vida %d de %d). "
+                 "Reparar custa %d moedas. Você tem %d.", r->muralha_vida, vida_max, MURALHA_CUSTO, r->ouro);
+        ui_msg(buf);
+        if (r->ouro < MURALHA_CUSTO) { ui_msg("Ouro insuficiente para o reparo."); return; }
+        if (!entrada_confirmar("Reparar a muralha?")) { ui_msg("Reparo adiado."); return; }
+        r->ouro       -= MURALHA_CUSTO;
+        r->muralha_vida = vida_max;
+        ui_msg("A muralha é reparada e volta à vida cheia.");
+        return;
+    }
+
+    int custo = MURALHA_CUSTO * (r->muralha_nivel + 1);
+    int prox_max = reino_muralha_vida_max(r->muralha_nivel + 1);
+    snprintf(buf, sizeof(buf),
+        "Subir a muralha para o nível %d custa %d moedas. Você tem %d. "
+        "Nível atual: %d (vida %d). No novo nível a muralha terá %d de vida.",
+        r->muralha_nivel + 1, custo, r->ouro, r->muralha_nivel, r->muralha_vida, prox_max);
     ui_msg(buf);
-    if (r->ouro < MURALHA_CUSTO) { ui_msg("Ouro insuficiente para a obra."); return; }
-    if (!entrada_confirmar("Iniciar a obra das muralhas?")) { ui_msg("Obra adiada."); return; }
-    r->ouro     -= MURALHA_CUSTO;
-    r->muralhas += 1;
-    snprintf(buf, sizeof(buf), "As muralhas são reforçadas. Nível de fortificação: %d. A defesa de Avalon está mais forte.", r->muralhas);
+    if (r->ouro < custo) { ui_msg("Ouro insuficiente para a obra."); return; }
+    if (!entrada_confirmar("Iniciar a obra da muralha?")) { ui_msg("Obra adiada."); return; }
+    r->ouro        -= custo;
+    r->muralha_nivel += 1;
+    r->muralha_vida   = reino_muralha_vida_max(r->muralha_nivel);
+    snprintf(buf, sizeof(buf), "A muralha sobe ao nível %d, com %d de vida. A defesa do reino está mais forte.",
+             r->muralha_nivel, r->muralha_vida);
     ui_msg(buf);
+}
+
+/* Submenu do Quartel: tudo que é militar fica aqui. */
+static void menu_quartel(Reino *r) {
+    for (;;) {
+        ui_prompt_menu("Quartel. O que o rei ordena?");
+        ui_opcao(1, "Recrutar soldados");
+        ui_opcao(2, "Dispensar soldados");
+        ui_opcao(3, "Reforçar a muralha");
+        ui_opcao(0, "Voltar");
+        ui_falar_opcoes();
+
+        char cmd[CMD_MAX];
+        entrada_ler(cmd, CMD_MAX);
+        entrada_normalizar(cmd);
+        if (!entrada_eh_numero(cmd)) { ui_msg("Digite o número da opção."); continue; }
+        switch (atoi(cmd)) {
+            case 1: acao_recrutar(r); break;
+            case 2: acao_dispensar(r); break;
+            case 3: acao_fortificar(r); break;
+            case 0: return;
+            default: ui_msg("Opção inválida.");
+        }
+    }
 }
 
 /* ================================================================
@@ -294,12 +361,10 @@ static void mostrar_menu_acoes(void) {
     ui_opcao(5, "Roçar novos campos");
     ui_opcao(6, "Comprar comida no mercado");
     ui_opcao(7, "Vender comida no mercado");
-    ui_opcao(8, "Rever a situação do reino");
-    if (g_reino.fase_drakmar >= 1) {
-        ui_opcao(9, "Recrutar soldados");
-        ui_opcao(10, "Reforçar as muralhas");
-        ui_opcao(11, "Dispensar soldados");
-    }
+    ui_opcao(8, "Construir uma mina");
+    ui_opcao(9, "Ir para o Quartel (militar)");
+    ui_opcao(10, "Reinos (atacar, espionar, jornal)");
+    ui_opcao(11, "Rever a situação do reino");
     ui_opcao(0, "Avançar para a próxima estação");
     ui_falar_opcoes();
 }
@@ -343,12 +408,28 @@ static void guia_topico(int t) {
                    "só rendem se houver gente suficiente para lavrá-los.");
             break;
         case 7:
-            ui_titulo("Drakmar");
-            ui_msg("Depois de alguns anos surgem rumores de guerra e, com eles, as ações de "
-                   "recrutar soldados e reforçar muralhas. Soldados também comem do celeiro "
-                   "no inverno. Mais tarde, um emissário exige tributo: você pode pagar para "
-                   "adiar, submeter-se, ou recusar e ir à guerra. Quanto mais cedo se "
-                   "preparar, mais forte estará na batalha final.");
+            ui_titulo("Reinos e a guerra");
+            ui_msg("O mapa tem seis reinos, incluindo o seu. Para vencer, anexe todos os outros. "
+                   "No menu Reinos você pode atacar, espionar (paga ouro por uma informação) e ler "
+                   "o jornal das guerras do mundo. Ao atacar, você escolhe quantos soldados enviar. "
+                   "Se mandar mais tropas do que a defesa do inimigo (soldados mais a vida da muralha), "
+                   "você o conquista, perde tropas iguais à defesa dele e leva um terço dos recursos. "
+                   "Se mandar de menos, perde todas as tropas enviadas. Os reinos rivais também "
+                   "crescem, se atacam e podem invadir você: se tomarem o seu reino, o jogo acaba.");
+            break;
+        case 8:
+            ui_titulo("Quartel e muralhas");
+            ui_msg("No Quartel você recruta e dispensa soldados e reforça a muralha. Cada soldado "
+                   "exige 1 habitante e come do celeiro no inverno. A muralha tem vida: ela defende, "
+                   "mas não pode atacar. Quanto maior o nível, mais vida. Um ataque que falha corrói a "
+                   "vida da muralha antes de atingir os soldados; se a vida zera, a muralha é destruída "
+                   "e precisa ser reerguida.");
+            break;
+        case 9:
+            ui_titulo("Minas");
+            ui_msg("Minas exigem alto investimento e cada nova mina custa mais que a anterior. Em troca, "
+                   "rendem ouro ao fim de cada estação, somado direto ao tesouro. Quanto mais minas, "
+                   "mais ouro para sustentar exército e muralhas.");
             break;
         default:
             ui_erro("Tópico inválido.");
@@ -365,7 +446,9 @@ static void mostrar_guia(void) {
         ui_opcao(4, "Gado");
         ui_opcao(5, "Impostos");
         ui_opcao(6, "Campos");
-        ui_opcao(7, "Drakmar e a guerra");
+        ui_opcao(7, "Reinos e a guerra");
+        ui_opcao(8, "Quartel e muralhas");
+        ui_opcao(9, "Minas");
         ui_opcao(0, "Voltar");
         ui_falar_opcoes();
 
@@ -451,15 +534,17 @@ static void jogar_estacao(void) {
             case 5: acao_rocar_campo(&g_reino); break;
             case 6: acao_comprar_comida(&g_reino); break;
             case 7: acao_vender_comida(&g_reino); break;
-            case 8: mostrar_relatorio(&g_reino); break;
-            case 9: acao_recrutar(&g_reino); break;
-            case 10: acao_fortificar(&g_reino); break;
-            case 11: acao_dispensar(&g_reino); break;
+            case 8: acao_construir_mina(&g_reino); break;
+            case 9: menu_quartel(&g_reino); mostrar_menu_acoes(); break;
+            case 10:
+                mundo_menu_reinos(&g_mundo, &g_reino);
+                if (g_reino.jogo_encerrado) return;
+                mostrar_menu_acoes();
+                break;
+            case 11: mostrar_relatorio(&g_reino); break;
             case 0: {
-                int ano_antes = g_reino.ano;
                 reino_avancar_estacao(&g_reino);
-                if (g_reino.ano != ano_antes)
-                    drakmar_inicio_de_ano(&g_reino);
+                mundo_nova_estacao(&g_mundo, &g_reino);
                 return;
             }
             default:
@@ -472,7 +557,12 @@ static int verificar_fim(void) {
     if (g_reino.jogo_encerrado) return 1;
     if (g_reino.populacao <= 0) {
         g_reino.jogo_encerrado = 1;
-        g_reino.final_obtido   = 5;   /* colapso por despovoamento */
+        g_reino.final_obtido   = 3;   /* colapso por despovoamento */
+        return 1;
+    }
+    if (mundo_reinos_ativos(&g_mundo) <= 1) {
+        g_reino.jogo_encerrado = 1;
+        g_reino.final_obtido   = 1;   /* anexou todos os reinos */
         return 1;
     }
     return 0;
@@ -482,29 +572,17 @@ static void mostrar_final(const Reino *r) {
     ui_separador();
     switch (r->final_obtido) {
         case 1:
-            ui_titulo("Fim: Triunfo Militar");
-            ui_narrar("As muralhas de Avalon resistem e o exército de Drakmar é repelido com "
-                      "pesadas perdas. O Rei Malachar recua e pede trégua. Avalon sobrevive pela "
-                      "força das armas que você teve a sabedoria de preparar a tempo.");
+            ui_titulo("Fim: Imperador de Avalon");
+            ui_narrar("Um por um, os reinos rivais caíram diante de suas tropas. Não resta no mapa "
+                      "bandeira que não seja a sua. Avalon não é mais um reino entre muitos: é o "
+                      "império que unificou todas as terras. Seu nome será lembrado por gerações.");
             break;
         case 2:
-            ui_titulo("Fim: Idade de Ouro");
-            ui_narrar("Avalon não apenas repele Drakmar como sai da guerra forte e próspera. "
-                      "Celeiros cheios, povo numeroso e cofres fartos: o reino que você construiu "
-                      "ao longo dos anos resistiu à maior das provações. Seu reinado será lembrado "
-                      "como a idade de ouro de Avalon.");
+            ui_titulo("Fim: Reino Conquistado");
+            ui_narrar("As muralhas cedem e as tropas inimigas tomam o reino. O que você construiu "
+                      "passa para as mãos de outro rei. Faltou força, ou preparo, na hora decisiva.");
             break;
         case 3:
-            ui_titulo("Fim: Reino Vassalo");
-            ui_narrar("Avalon vive, mas curvada sob o jugo de Drakmar. A coroa pesou demais para "
-                      "ser defendida, e a independência foi o preço da sobrevivência.");
-            break;
-        case 4:
-            ui_titulo("Fim: Queda de Avalon");
-            ui_narrar("As muralhas cedem e as tropas de Drakmar tomam o reino. O que você construiu "
-                      "passa para as mãos do inimigo. Faltou preparo para a hora decisiva.");
-            break;
-        case 5:
             ui_titulo("Fim: Reino Despovoado");
             ui_narrar("Avalon esvaziou-se. Sem povo para lavrar a terra, o reino deixou de existir. "
                       "A fome e a má gestão fizeram o que nenhum exército conseguiria.");
@@ -534,13 +612,15 @@ static void novo_jogo(void) {
 
     reino_inicializar(&g_reino, nome);
     g_reino.clima = utils_rand(60, 140);
+    mundo_inicializar(&g_mundo);
 
     ui_titulo("O Peso da Coroa");
     ui_narrar(
-        "Vossa Majestade assume o trono de Avalon, um reino agrário de campos verdes e "
-        "rebanhos fartos. Cabe ao rei zelar pelo povo: plantar, criar gado, encher o celeiro "
-        "e governar com sabedoria estação após estação. Os anos de paz são seus para construir "
-        "um reino próspero. Que tipo de soberano você será?");
+        "Vossa Majestade assume o trono de Avalon, um entre seis reinos que disputam estas "
+        "terras. Cuide do povo, da lavoura e do gado, encha os cofres com minas de ouro, "
+        "erga muralhas e forje um exército. Os reinos rivais crescem, se espionam e guerreiam "
+        "entre si. Só haverá paz quando uma única coroa reinar sobre todas as terras: a sua. "
+        "Anexe todos os reinos e torne-se imperador.");
     ui_msg("Dica: digite 'ajuda' a qualquer momento para ver os comandos.");
 
     while (!verificar_fim())
