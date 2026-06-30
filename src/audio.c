@@ -91,57 +91,71 @@ static void montar_comando(char *cmd, size_t n, const char *path) {
 #endif
 }
 
-static void play_wav(const char *path) {
+/* Modo cru do terminal: mantido ligado durante toda a fala (sintese + audio),
+   para que o ESC seja capturado tambem enquanto o piper ainda esta gerando o
+   audio (a etapa mais lenta, principalmente na primeira fala). */
+static struct termios g_termios_velho;
+static int g_raw_ativo = 0;
+
+static void raw_on(void) {
+    if (g_raw_ativo) return;
+    if (!isatty(STDIN_FILENO)) return;          /* entrada redirecionada (pipe) */
+    if (tcgetattr(STDIN_FILENO, &g_termios_velho) != 0) return;
+    struct termios cru = g_termios_velho;
+    cru.c_lflag &= ~(ICANON | ECHO);
+    cru.c_cc[VMIN]  = 0;
+    cru.c_cc[VTIME] = 0;
+    tcsetattr(STDIN_FILENO, TCSANOW, &cru);
+    g_raw_ativo = 1;
+}
+
+static void raw_off(void) {
+    if (!g_raw_ativo) return;
+    tcflush(STDIN_FILENO, TCIFLUSH);            /* descarta teclas digitadas durante a fala */
+    tcsetattr(STDIN_FILENO, TCSANOW, &g_termios_velho);
+    g_raw_ativo = 0;
+}
+
+/* Executa um comando em sub-processo, vigiando o teclado. Se o ESC for
+   pressionado, mata o processo e retorna 1. Sem terminal interativo, apenas
+   espera o comando terminar. */
+static int rodar_vigiando_esc(const char *cmd) {
     pid_t pid = fork();
-    if (pid < 0) return;
+    if (pid < 0) { system(cmd); return 0; }
     if (pid == 0) {
-        /* filho: silencia saidas e reproduz */
+        setpgid(0, 0);                           /* grupo proprio: shell + player juntos */
         freopen("/dev/null", "w", stderr);
         freopen("/dev/null", "w", stdout);
-        char cmd[512];
-        montar_comando(cmd, sizeof(cmd), path);
         execl("/bin/sh", "sh", "-c", cmd, (char *)NULL);
         _exit(127);
     }
+    setpgid(pid, pid);                           /* idem no pai, evitando a corrida */
 
-    /* So vigiamos o teclado quando a entrada e um terminal real. Com a
-       entrada redirecionada (pipe), apenas esperamos o audio terminar, para
-       nao consumir os comandos que estao por vir. */
-    struct termios velho, cru;
-    int interativo = isatty(STDIN_FILENO) && tcgetattr(STDIN_FILENO, &velho) == 0;
-    if (!interativo) {
+    if (!g_raw_ativo) {                          /* nao interativo: so aguarda */
         int status;
         waitpid(pid, &status, 0);
-        return;
+        return 0;
     }
-
-    cru = velho;
-    cru.c_lflag &= ~(ICANON | ECHO);
-    tcsetattr(STDIN_FILENO, TCSANOW, &cru);
 
     for (;;) {
         int status;
-        if (waitpid(pid, &status, WNOHANG) == pid) break;   /* terminou */
+        if (waitpid(pid, &status, WNOHANG) == pid) return 0;   /* terminou */
 
         fd_set fds;
         FD_ZERO(&fds);
         FD_SET(STDIN_FILENO, &fds);
-        struct timeval tv = {0, 30000};                     /* 30 ms */
+        struct timeval tv = {0, 30000};                        /* 30 ms */
         if (select(STDIN_FILENO + 1, &fds, NULL, NULL, &tv) > 0) {
             unsigned char c;
-            if (read(STDIN_FILENO, &c, 1) == 1 && c == 27) { /* ESC: pular o resto */
-                g_pular_narracao = 1;
-                kill(pid, SIGTERM);
-                waitpid(pid, &status, 0);
-                break;
+            while (read(STDIN_FILENO, &c, 1) == 1) {            /* drena a sequencia */
+                if (c == 27) {                                 /* ESC: abortar */
+                    kill(-pid, SIGKILL);                       /* mata o grupo inteiro */
+                    waitpid(pid, &status, 0);
+                    return 1;
+                }
             }
-            /* outras teclas durante a fala sao ignoradas */
         }
     }
-
-    /* limpa o que tenha sido digitado durante a fala, evitando dessincronia */
-    tcflush(STDIN_FILENO, TCIFLUSH);
-    tcsetattr(STDIN_FILENO, TCSANOW, &velho);
 }
 #endif
 
@@ -169,14 +183,27 @@ void tts_speak(const char *text) {
         PIPER_MODEL, escala, TEMP_WAV);
 #endif
 
+#ifdef _WIN32
     int ret = system(cmd);
     remove("piper_in.txt");
-
     if (ret != 0) {
         fprintf(stderr, "Erro ao executar piper\n");
         return;
     }
-
     play_wav(TEMP_WAV);
     remove(TEMP_WAV);
+#else
+    /* Vigia o ESC durante a sintese E durante a reproducao. */
+    raw_on();
+    int abortou = rodar_vigiando_esc(cmd);       /* piper gera o WAV */
+    remove("piper_in.txt");
+    if (abortou) { g_pular_narracao = 1; raw_off(); return; }
+
+    char play_cmd[512];
+    montar_comando(play_cmd, sizeof(play_cmd), TEMP_WAV);
+    if (rodar_vigiando_esc(play_cmd))            /* toca o WAV */
+        g_pular_narracao = 1;
+    remove(TEMP_WAV);
+    raw_off();
+#endif
 }
