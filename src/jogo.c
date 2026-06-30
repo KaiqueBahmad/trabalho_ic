@@ -572,7 +572,7 @@ static void perguntar_audio(void) {
         printf("\nNarração desativada. Ative quando quiser digitando 'audio'.\n\n");
     } else {
         g_audio_ativado = 1;
-        tts_speak("Narração ativada. A qualquer momento, aperte a tecla ESC para pular a narração atual. Bem-vindo a O Peso da Coroa.");
+        tts_speak("Narração ativada. A qualquer momento, aperte a tecla esque para pular a narração atual. Bem-vindo a O Peso da Coroa.");
         printf("\nNarração ativada. Aperte ESC para pular uma narração.\n\n");
     }
 }
