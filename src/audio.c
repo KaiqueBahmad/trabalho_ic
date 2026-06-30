@@ -18,6 +18,7 @@
 
 #define TEMP_WAV    "piper_out.wav"
 #define PIPER_MODEL "models/pt_BR-faber-medium.onnx"
+#define BEEP_WAV    "models/beep.wav"
 
 /* Sinalizador de "pular narracao". O ESC durante a fala o ativa, fazendo as
    narracoes restantes do prompt atual serem ignoradas. A leitura de entrada
@@ -158,6 +159,19 @@ static int rodar_vigiando_esc(const char *cmd) {
     }
 }
 #endif
+
+/* Toca o beep prefabricado (models/beep.wav) para sinalizar a vez de digitar.
+   Curto e nao interrompivel; nao mexe no estado de narracao. */
+void audio_beep(void) {
+#ifdef _WIN32
+    /* assincrono: nao trava o prompt e e descartado se algo novo tocar */
+    PlaySoundA(BEEP_WAV, NULL, SND_FILENAME | SND_ASYNC | SND_NODEFAULT);
+#else
+    char cmd[512];
+    montar_comando(cmd, sizeof(cmd), BEEP_WAV);
+    system(cmd);
+#endif
+}
 
 void tts_speak(const char *text) {
     /* se o jogador pediu para pular, ignora as narracoes restantes do prompt */

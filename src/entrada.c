@@ -5,6 +5,13 @@
 #include <ctype.h>
 #include <stdlib.h>
 
+/* Beep curto e suave para sinalizar que e a vez do jogador digitar.
+   Toca o arquivo prefabricado models/beep.wav (ver audio.c). */
+static void beep_suave(void) {
+    extern int g_audio_ativado;
+    if (g_audio_ativado) audio_beep();
+}
+
 static void remover_acentos(char *s) {
     unsigned char *p = (unsigned char *)s;
     unsigned char *w = p;
@@ -48,6 +55,7 @@ int entrada_ler_linha(char *buf, int size) {
 }
 
 void entrada_ler(char *buf, int size) {
+    beep_suave();
     printf("> ");
     fflush(stdout);
     if (!entrada_ler_linha(buf, size)) {
