@@ -328,7 +328,7 @@ static void acao_fortificar(Reino *r) {
 /* Submenu do Quartel: tudo que é militar fica aqui. */
 static void menu_quartel(Reino *r) {
     for (;;) {
-        ui_prompt_menu("Quartel. O que o rei ordena?");
+        ui_prompt_menu("Quartel, O que o rei ordena?");
         ui_opcao(1, "Recrutar soldados");
         ui_opcao(2, "Dispensar soldados");
         ui_opcao(3, "Reforçar a muralha");
