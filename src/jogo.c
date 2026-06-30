@@ -529,6 +529,7 @@ static void novo_jogo(void) {
     char nome[NOME_MAX];
     falar("Qual é o seu nome, Majestade?");
     printf("\nQual é o seu nome, Majestade? ");
+    audio_beep();
     fflush(stdout);
     if (!entrada_ler_linha(nome, NOME_MAX)) strcpy(nome, "Avalon");
     if (nome[0] == '\0') strcpy(nome, "Avalon");
