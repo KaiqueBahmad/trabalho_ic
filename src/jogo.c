@@ -67,7 +67,7 @@ static void mostrar_relatorio(const Reino *r) {
     printf("  Clima:      %s\n", clima_desc(r->clima));
     if (r->fase_drakmar >= 1) {
         printf("  Soldados:   %d (muralhas nível %d)\n", r->soldados, r->muralhas);
-        printf("  Ameaça de Drakmar: %d\n", r->ameaca);
+        printf("  Ameaça de Drakmar: %s\n", drakmar_ameaca_desc(r));
     }
 
     /* aviso de planejamento */
@@ -86,8 +86,8 @@ static void mostrar_relatorio(const Reino *r) {
         char mil[160] = "";
         if (r->fase_drakmar >= 1)
             snprintf(mil, sizeof(mil),
-                "Soldados: %d. Muralhas nível %d. Ameaça de Drakmar: %d. ",
-                r->soldados, r->muralhas, r->ameaca);
+                "Soldados: %d. Muralhas nível %d. Ameaça de Drakmar: %s. ",
+                r->soldados, r->muralhas, drakmar_ameaca_desc(r));
         char resumo[760];
         snprintf(resumo, sizeof(resumo),
             "Ano %d de reinado, %s. "
@@ -431,6 +431,7 @@ static int processar_global(const char *cmd) {
 /* Processa uma estacao inteira: relatorio, acoes ate avancar, e a simulacao.
    Retorna quando o jogador escolhe avancar a estacao. */
 static void jogar_estacao(void) {
+    drakmar_evento_estacao(&g_reino);
     eventos_talvez(&g_reino);
     mostrar_relatorio(&g_reino);
     mostrar_menu_acoes();

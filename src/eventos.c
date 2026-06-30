@@ -256,6 +256,16 @@ static int forca_defensiva(const Reino *r) {
     return defesa;
 }
 
+/* Descricao vaga da ameaca: o jogador sente a sombra crescer, mas nunca
+   conhece o numero exato (e tem de decidir no escuro quanto se preparar). */
+const char *drakmar_ameaca_desc(const Reino *r) {
+    if (r->fase_drakmar < 1) return "nenhuma";
+    if (r->ameaca < 70)  return "distante";
+    if (r->ameaca < 100) return "crescente";
+    if (r->ameaca < 135) return "grave";
+    return "iminente";
+}
+
 static void drakmar_guerra(Reino *r) {
     r->fase_drakmar = 3;
     int defesa  = forca_defensiva(r);
@@ -267,18 +277,21 @@ static void drakmar_guerra(Reino *r) {
               "Avalon. Os portões se fecham, os soldados tomam posição nas muralhas. "
               "O destino do reino será decidido nos próximos dias.");
     {
-        char buf[200];
+        char buf[220];
         snprintf(buf, sizeof(buf),
-            "Força de defesa de Avalon: %d. Força de Drakmar: %d. Serão três assaltos.",
-            defesa, ataque);
+            "Força de defesa de Avalon: %d. O exército de Drakmar cobre o horizonte — "
+            "ninguém sabe ao certo quantos são. Serão três assaltos.",
+            defesa);
         ui_msg(buf);
     }
 
     int vitorias = 0;
     const char *nomes[3] = {"Primeiro assalto", "Segundo assalto", "Assalto final"};
     for (int i = 0; i < 3; i++) {
-        int meu  = defesa + utils_rand(0, 25);
-        int dele = ataque + utils_rand(0, 25);
+        /* Drakmar leva vantagem: rola mais alto que a defesa e parte de um
+           patamar maior, exigindo bem mais preparo do jogador para vencer. */
+        int meu  = defesa + utils_rand(0, 18);
+        int dele = ataque + utils_rand(8, 32);
         char buf[200];
         if (meu > dele) {
             vitorias++;
@@ -333,7 +346,7 @@ static void drakmar_tributo(Reino *r) {
             } else {
                 int leva = r->ouro;
                 r->ouro = 0;
-                r->ameaca += 5;
+                r->ameaca += 8;
                 snprintf(buf, sizeof(buf), "O tesouro não cobre o tributo. O emissário leva as %d moedas "
                          "que há e parte furioso. Drakmar fica ainda mais ameaçador.", leva);
                 ui_narrar(buf);
@@ -349,7 +362,7 @@ static void drakmar_tributo(Reino *r) {
             } else {
                 int leva = r->comida;
                 r->comida = 0;
-                r->ameaca += 5;
+                r->ameaca += 8;
                 snprintf(buf, sizeof(buf), "O celeiro não cobre o tributo. O emissário leva as %d medidas "
                          "que há e parte furioso. Drakmar fica ainda mais ameaçador.", leva);
                 ui_narrar(buf);
@@ -370,13 +383,168 @@ static void drakmar_tributo(Reino *r) {
     }
 }
 
+/* ---- Eventos menores de Drakmar, ao longo das estacoes ----
+   Mantem a sombra de Drakmar presente o ano inteiro, e nao so na troca de ano.
+   Cada um deixa o jogador agir: gastar tropas, ouro ou suportar prejuizo,
+   afetando (sem revelar) o quanto a ameaca cresce. */
+
+static void dk_ev_batedores(Reino *r) {
+    ui_titulo("Batedores na Fronteira");
+    ui_narrar("Sentinelas avistam batedores de Drakmar medindo as defesas de Avalon à beira "
+              "da floresta. Não atacam — apenas observam, contam soldados e anotam as brechas.");
+    ui_prompt_menu("O que o rei ordena?");
+    ui_opcao(1, "Enviar soldados para expulsá-los");
+    ui_opcao(2, "Subornar um deles por informações (30 de ouro)");
+    ui_opcao(3, "Ignorar e deixá-los ir");
+    ui_falar_opcoes();
+    char buf[240];
+    switch (ler_escolha(3)) {
+        case 1:
+            if (r->soldados >= 3) {
+                int perda = utils_rand(0, 2);
+                r->soldados -= perda;
+                r->ameaca   -= 7;
+                snprintf(buf, sizeof(buf), "Seus soldados perseguem os batedores mata adentro. Drakmar "
+                         "perde os olhos sobre Avalon e repensa o ataque. Baixas: %d. Exército: %d.",
+                         perda, r->soldados);
+            } else {
+                r->ameaca += 6;
+                snprintf(buf, sizeof(buf), "Sem tropas para persegui-los, os batedores vagam à vontade "
+                         "e voltam para Drakmar com um mapa das brechas de Avalon.");
+            }
+            ui_narrar(buf);
+            break;
+        case 2:
+            if (r->ouro >= 30) {
+                r->ouro   -= 30;
+                r->ameaca -= 10;
+                snprintf(buf, sizeof(buf), "Por 30 moedas, um batedor ganancioso revela os planos de "
+                         "Malachar. Avalon ganha um tempo precioso para se preparar. Tesouro: %d.", r->ouro);
+            } else {
+                snprintf(buf, sizeof(buf), "O tesouro não junta as 30 moedas pedidas. Os batedores somem "
+                         "na floresta sem dizer palavra.");
+            }
+            ui_narrar(buf);
+            break;
+        default:
+            r->ameaca += 4;
+            ui_narrar("Os batedores partem em paz — levando consigo tudo o que viram das muralhas de Avalon.");
+    }
+}
+
+static void dk_ev_saque(Reino *r) {
+    ui_titulo("Saque na Fronteira");
+    ui_narrar("Cavaleiros de Drakmar cruzam a fronteira e tocam fogo num povoado de Avalon, testando "
+              "a coragem do rei. Camponeses apavorados correm para a corte pedindo proteção.");
+    ui_prompt_menu("Como Avalon responde?");
+    ui_opcao(1, "Revidar com a guarda (arrisca soldados)");
+    ui_opcao(2, "Comprar a retirada com ouro (40 de ouro)");
+    ui_opcao(3, "Recolher o povo e suportar o prejuízo");
+    ui_falar_opcoes();
+    char buf[240];
+    switch (ler_escolha(3)) {
+        case 1:
+            if (r->soldados >= 4) {
+                int perda = utils_rand(1, 3);
+                r->soldados -= perda;
+                r->ameaca   -= 8;
+                snprintf(buf, sizeof(buf), "A guarda de Avalon repele os cavaleiros e os faz sangrar na "
+                         "retirada. Drakmar aprende a temer estas muralhas. Baixas: %d. Exército: %d.",
+                         perda, r->soldados);
+            } else {
+                int mortos = utils_rand(2, 6);
+                if (mortos > r->populacao) mortos = r->populacao;
+                r->populacao -= mortos;
+                r->ameaca    += 7;
+                snprintf(buf, sizeof(buf), "Com tão poucos soldados, o revide vira massacre. Avalon perde "
+                         "%d almas e Drakmar ri da fraqueza do reino. População: %d.", mortos, r->populacao);
+            }
+            ui_narrar(buf);
+            break;
+        case 2:
+            if (r->ouro >= 40) {
+                r->ouro -= 40;
+                snprintf(buf, sizeof(buf), "Por 40 moedas, os saqueadores recuam sem mais sangue. Mas "
+                         "Malachar anota que Avalon prefere pagar a lutar. Tesouro: %d.", r->ouro);
+            } else {
+                int leva = r->ouro;
+                r->ouro    = 0;
+                r->ameaca += 6;
+                snprintf(buf, sizeof(buf), "O tesouro só tem %d moedas; os saqueadores levam tudo e queimam "
+                         "mais um celeiro por desprezo.", leva);
+            }
+            ui_narrar(buf);
+            break;
+        default: {
+            int perda = utils_rand(8, 20);
+            if (perda > r->comida) perda = r->comida;
+            r->comida -= perda;
+            snprintf(buf, sizeof(buf), "O rei recolhe o povo atrás das muralhas e deixa o povoado arder. "
+                     "Vidas são poupadas, mas o celeiro perde %d medidas no saque.", perda);
+            ui_narrar(buf);
+        }
+    }
+}
+
+static void dk_ev_desertor(Reino *r) {
+    ui_titulo("Um Desertor de Drakmar");
+    ui_narrar("Um soldado desertor de Drakmar chega esfomeado aos portões. Jura conhecer os planos de "
+              "Malachar e oferece o que sabe — em troca de abrigo e algumas moedas.");
+    ui_prompt_menu("O rei o recebe?");
+    ui_opcao(1, "Acolhê-lo e pagar por informações (25 de ouro)");
+    ui_opcao(2, "Alistá-lo na guarda de Avalon");
+    ui_opcao(3, "Expulsá-lo como possível espião");
+    ui_falar_opcoes();
+    char buf[240];
+    switch (ler_escolha(3)) {
+        case 1:
+            if (r->ouro >= 25) {
+                r->ouro   -= 25;
+                r->ameaca -= 11;
+                snprintf(buf, sizeof(buf), "O desertor revela rotas, senhas e as fraquezas do exército "
+                         "inimigo. Avalon se prepara muito melhor para o que vem. Tesouro: %d.", r->ouro);
+            } else {
+                snprintf(buf, sizeof(buf), "Sem moedas a oferecer, o desertor desconfia e guarda o que "
+                         "sabe. Some na primeira noite.");
+            }
+            ui_narrar(buf);
+            break;
+        case 2:
+            r->soldados += 1;
+            r->ameaca   -= 4;
+            snprintf(buf, sizeof(buf), "O desertor jura lealdade a Avalon e empunha a lança nas muralhas. "
+                     "Exército: %d.", r->soldados);
+            ui_narrar(buf);
+            break;
+        default:
+            ui_narrar("Por precaução, o rei manda expulsá-lo. Talvez fosse mesmo um espião — ou talvez "
+                      "Avalon tenha acabado de perder um aliado.");
+    }
+}
+
+/* Talvez dispare um encontro com Drakmar no inicio de uma estacao, enquanto a
+   tensao cresce (fase 1 ou 2, antes da guerra aberta). */
+void drakmar_evento_estacao(Reino *r) {
+    if (r->jogo_encerrado) return;
+    if (r->fase_drakmar < 1 || r->fase_drakmar >= 3) return;
+    if (getenv("COROA_SEM_EVENTOS")) return;
+    if (!utils_chance(35)) return;
+
+    switch (utils_rand(0, 2)) {
+        case 0:  dk_ev_batedores(r); break;
+        case 1:  dk_ev_saque(r);     break;
+        default: dk_ev_desertor(r);  break;
+    }
+    if (r->ameaca < 30) r->ameaca = 30;   /* a sombra nunca some por completo */
+}
+
 void drakmar_inicio_de_ano(Reino *r) {
     if (r->jogo_encerrado) return;
 
     if (r->fase_drakmar == 0) {
         if (r->ano >= 4) {
             r->fase_drakmar = 1;
-            r->ameaca = 40;
+            r->ameaca = 50;
             ui_titulo("Rumores do Leste");
             ui_narrar("Mercadores trazem notícias sombrias: a leste, o reino de Drakmar arma seus "
                       "exércitos e olha com cobiça para as terras férteis de Avalon. Ainda é só um "
@@ -386,8 +554,8 @@ void drakmar_inicio_de_ano(Reino *r) {
         return;
     }
 
-    /* fase >= 1: Drakmar cresce a cada ano */
-    r->ameaca += utils_rand(8, 14);
+    /* fase >= 1: Drakmar cresce a cada ano (ritmo mais agressivo) */
+    r->ameaca += utils_rand(12, 18);
 
     if (r->fase_drakmar == 1 && r->ano >= 6) {
         r->fase_drakmar = 2;
