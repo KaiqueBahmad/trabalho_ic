@@ -121,7 +121,7 @@ static void acao_impostos(Reino *r) {
     char buf[180];
     snprintf(buf, sizeof(buf),
         "O imposto atual é de %d por cento. Abaixo de %d por cento o reino atrai novos moradores; "
-        "acima de 20 por cento, parte do povo migra para outras terras.", r->imposto, 15);
+        "acima disso, parte do povo migra para outras terras.", r->imposto, 15);
     ui_msg(buf);
     int novo = ler_quantidade("Defina a nova alíquota de imposto, de 0 a 60 por cento:");
     if (novo < 0) novo = 0;
@@ -270,13 +270,17 @@ static void acao_dispensar(Reino *r) {
 
 static void acao_fortificar(Reino *r) {
     if (r->muralhas >= MURALHA_MAX) { ui_msg("As muralhas de Avalon já estão no máximo."); return; }
+    /* Cada nível custa mais que o anterior: a primeira paliçada é barata, mas
+       muralhas de pedra altas exigem um investimento crescente. Assim, fortificar
+       até o máximo é uma escolha de reino, não um gasto trivial. */
+    int custo = MURALHA_CUSTO * (r->muralhas + 1);
     char buf[160];
     snprintf(buf, sizeof(buf), "Reforçar as muralhas custa %d moedas. Você tem %d. Nível atual: %d de %d.",
-             MURALHA_CUSTO, r->ouro, r->muralhas, MURALHA_MAX);
+             custo, r->ouro, r->muralhas, MURALHA_MAX);
     ui_msg(buf);
-    if (r->ouro < MURALHA_CUSTO) { ui_msg("Ouro insuficiente para a obra."); return; }
+    if (r->ouro < custo) { ui_msg("Ouro insuficiente para a obra."); return; }
     if (!entrada_confirmar("Iniciar a obra das muralhas?")) { ui_msg("Obra adiada."); return; }
-    r->ouro     -= MURALHA_CUSTO;
+    r->ouro     -= custo;
     r->muralhas += 1;
     snprintf(buf, sizeof(buf), "As muralhas são reforçadas. Nível de fortificação: %d. A defesa de Avalon está mais forte.", r->muralhas);
     ui_msg(buf);
@@ -333,8 +337,8 @@ static void guia_topico(int t) {
             break;
         case 5:
             ui_titulo("Impostos");
-            ui_msg("Perto de 15 por cento o reino fica equilibrado. Abaixo disso, novos "
-                   "moradores chegam e a população cresce. Acima de 20 por cento, parte do "
+            ui_msg("Em 15 por cento o reino fica equilibrado. Abaixo disso, novos "
+                   "moradores chegam e a população cresce. Acima disso, parte do "
                    "povo migra para outras terras: rende mais ouro, mas encolhe o reino.");
             break;
         case 6:

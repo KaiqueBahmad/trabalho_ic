@@ -99,6 +99,19 @@ static void processar_outono(Reino *r) {
 static void processar_inverno(Reino *r) {
     ui_narrar("O inverno cobre Avalon de frio. O povo recolhe-se e vive do que guardou no celeiro.");
 
+    /* Parte dos grãos guardados se perde a cada ano: estraga, mofa e alimenta
+       pragas. Isso impede acumular um celeiro infinito e mantém a fome como
+       ameaça real mesmo depois de anos de fartura. */
+    int estragado = r->comida / 10;
+    if (estragado > 0) {
+        r->comida -= estragado;
+        char buf[120];
+        snprintf(buf, sizeof(buf),
+            "Parte do estoque não resiste ao ano: %d medidas estragam no celeiro. Restam %d.",
+            estragado, r->comida);
+        ui_msg(buf);
+    }
+
     int necessario = reino_comida_necessaria(r);
     int mortes_fome = 0;
     if (r->comida >= necessario) {
@@ -132,10 +145,10 @@ static void processar_inverno(Reino *r) {
     if (mortes_fome == 0) {
         nascimentos = r->populacao * 4 / 100;
         if (r->imposto < IMPOSTO_NEUTRO)
-            imigrantes = r->populacao * (IMPOSTO_NEUTRO - r->imposto) * 2 / 1000;
+            imigrantes = r->populacao * (IMPOSTO_NEUTRO - r->imposto) * 2 / 500;
     }
-    if (r->imposto > 20)
-        emigrantes = r->populacao * (r->imposto - 20) * 4 / 1000;
+    if (r->imposto > IMPOSTO_NEUTRO)
+        emigrantes = r->populacao * (r->imposto - IMPOSTO_NEUTRO) * 4 / 1000;
 
     int delta = nascimentos + imigrantes - emigrantes;
     r->populacao += delta;
