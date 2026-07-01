@@ -245,6 +245,152 @@ static void ev_boa_safra(Reino *r) {
 }
 
 /* ================================================================
+   EVENTOS DE COMBATE (saques, extorsão, feras)
+   Padrão: pagar para evitar o ataque OU arriscar a defesa. Se a defesa
+   falha, perde-se ainda MAIS do que custaria pagar; se vence, apenas se
+   evita o prejuízo — nada de bom acontece. É onde a guarda ganha utilidade
+   fora da guerra contra Drakmar.
+   ================================================================ */
+
+/* Chance (%) de a guarda repelir um ataque, conforme soldados e muralhas.
+   Sem exército, defender é uma aposta ruim; uma boa guarda a torna segura. */
+static int chance_defesa(const Reino *r) {
+    int c = 25 + r->soldados * 3 + r->muralhas * 5;
+    if (c > 90) c = 90;
+    return c;
+}
+
+/* ---- A Companhia Livre (mercenários extorquem ouro) ---- */
+static void ev_mercenarios(Reino *r) {
+    int exige = utils_rand(30, 55);
+    ui_titulo("A Companhia Livre");
+    char intro[240], buf[300];
+    snprintf(intro, sizeof(intro),
+        "Uma companhia de mercenários sem contrato acampa nos arredores e exige %d moedas "
+        "para partir sem tocar em Avalon.", exige);
+    ui_narrar(intro);
+    ui_prompt_menu("Como o rei responde?");
+    ui_opcao(1, "Pagar para que sigam em paz");
+    ui_opcao(2, "Chamar a guarda e expulsá-los à força");
+    ui_falar_opcoes();
+    if (ler_escolha(2) == 1) {
+        if (r->ouro >= exige) {
+            r->ouro -= exige;
+            snprintf(buf, sizeof(buf), "As moedas trocam de mãos e a companhia levanta acampamento sem violência. Tesouro: %d.", r->ouro);
+        } else {
+            int leva_ouro = r->ouro;         r->ouro = 0;
+            int leva_com  = r->comida / 6;    r->comida -= leva_com;
+            snprintf(buf, sizeof(buf), "O tesouro não cobre a exigência. Furiosos, os mercenários levam as %d moedas que há e %d medidas do celeiro antes de sumir.", leva_ouro, leva_com);
+        }
+        ui_narrar(buf);
+    } else {
+        if (utils_chance(chance_defesa(r))) {
+            ui_narrar("A guarda fecha as fileiras. Sem apetite para um cerco caro, os mercenários "
+                      "recuam para outras terras. Avalon nada ganha além da paz.");
+        } else {
+            int leva_ouro = r->ouro / 3;
+            int leva_com  = r->comida / 4;
+            int mortos    = r->soldados > 0 ? utils_rand(1, r->soldados / 3 + 1) : 0;
+            r->ouro     -= leva_ouro;
+            r->comida   -= leva_com;
+            r->soldados -= mortos;
+            char extra[80] = "";
+            if (mortos > 0) snprintf(extra, sizeof(extra), " e deixam %d soldados caídos", mortos);
+            snprintf(buf, sizeof(buf), "O confronto corre mal: os mercenários rompem a linha, saqueiam %d moedas e %d medidas do celeiro%s. Ter saído para a luta custou bem mais que pagar.", leva_ouro, leva_com, extra);
+            ui_narrar(buf);
+        }
+    }
+}
+
+/* ---- Cavaleiros do Norte (saqueadores exigem tributo em gado) ---- */
+static void ev_barbaros(Reino *r) {
+    if (r->gado < 4) return;
+    int pede = utils_rand(4, 9);
+    if (pede > r->gado) pede = r->gado;
+    ui_titulo("Cavaleiros do Norte");
+    char intro[260], buf[300];
+    snprintf(intro, sizeof(intro),
+        "Cavaleiros do norte, endurecidos por invernos de fome, cruzam a fronteira. Prometem "
+        "poupar as aldeias em troca de %d cabeças de gado.", pede);
+    ui_narrar(intro);
+    ui_prompt_menu("O que o rei decide?");
+    ui_opcao(1, "Entregar o gado e evitar o derramamento de sangue");
+    ui_opcao(2, "Postar a guarda e enfrentá-los");
+    ui_falar_opcoes();
+    if (ler_escolha(2) == 1) {
+        r->gado -= pede;
+        snprintf(buf, sizeof(buf), "O gado é entregue e os cavaleiros partem satisfeitos. Rebanho: %d.", r->gado);
+        ui_narrar(buf);
+    } else {
+        if (utils_chance(chance_defesa(r))) {
+            ui_narrar("A guarda repele os cavaleiros nas cercanias e eles somem na poeira. Os "
+                      "currais estão a salvo — Avalon apenas evitou o prejuízo.");
+        } else {
+            int perde_gado = r->gado / 3 + pede;
+            if (perde_gado > r->gado) perde_gado = r->gado;
+            int mortos = utils_rand(2, 7);
+            if (mortos > r->populacao) mortos = r->populacao;
+            r->gado      -= perde_gado;
+            r->populacao -= mortos;
+            snprintf(buf, sizeof(buf), "A defesa falha: os cavaleiros rompem as cercas, tocam %d cabeças de gado e queimam uma aldeia, matando %d habitantes. Resistir custou muito mais.", perde_gado, mortos);
+            ui_narrar(buf);
+        }
+    }
+}
+
+/* ---- Matilha faminta (feras atacam o rebanho) ---- */
+static void ev_feras(Reino *r) {
+    if (r->gado < 4) return;
+    int custo = 20;
+    ui_titulo("Matilha Faminta");
+    ui_narrar("Uma grande matilha de lobos desce das montanhas e ronda os currais de Avalon, "
+              "faminta pelo rebanho.");
+    char buf[280];
+    ui_prompt_menu("Como proteger os rebanhos?");
+    ui_opcao(1, "Contratar caçadores e armar armadilhas (20 de ouro)");
+    ui_opcao(2, "Enviar soldados para vigiar os currais");
+    ui_falar_opcoes();
+    if (ler_escolha(2) == 1) {
+        if (r->ouro >= custo) {
+            r->ouro -= custo;
+            snprintf(buf, sizeof(buf), "Os caçadores emboscam a matilha e a afugentam. O rebanho fica a salvo. Tesouro: %d.", r->ouro);
+        } else {
+            int perde = r->gado / 5;
+            r->gado -= perde;
+            snprintf(buf, sizeof(buf), "Sem ouro para caçadores, os lobos investem e levam %d cabeças na noite. Rebanho: %d.", perde, r->gado);
+        }
+        ui_narrar(buf);
+    } else {
+        if (utils_chance(chance_defesa(r))) {
+            ui_narrar("Os soldados montam guarda com fogueiras e lanças. Os lobos rondam, mas não "
+                      "passam. O rebanho amanhece intacto — nada além do prejuízo evitado.");
+        } else {
+            int perde   = r->gado / 3;
+            int feridos = (r->soldados > 0 && utils_chance(40)) ? 1 : 0;
+            r->gado     -= perde;
+            r->soldados -= feridos;
+            char extra[90] = "";
+            if (feridos > 0) snprintf(extra, sizeof(extra), " e um soldado é dilacerado na escuridão");
+            snprintf(buf, sizeof(buf), "A vigília falha: os lobos rompem o cerco e matam %d cabeças%s. A noite cobra caro.", perde, extra);
+            ui_narrar(buf);
+        }
+    }
+}
+
+/* ---- Praga de ratos no celeiro ---- */
+static void ev_ratos(Reino *r) {
+    if (r->comida < 20) return;
+    int perde = r->comida / 7;
+    if (perde < 8) perde = 8;
+    if (perde > r->comida) perde = r->comida;
+    r->comida -= perde;
+    ui_titulo("Praga no Celeiro");
+    char buf[200];
+    snprintf(buf, sizeof(buf), "Ratos infestam o celeiro real e roem os grãos guardados. Perdem-se %d medidas, restando %d.", perde, r->comida);
+    ui_narrar(buf);
+}
+
+/* ================================================================
    ARCO DE DRAKMAR
    ================================================================ */
 static int forca_defensiva(const Reino *r) {
@@ -581,7 +727,8 @@ void eventos_talvez(Reino *r) {
 
     static FnEvento pool[] = {
         ev_peste_gado, ev_refugiados, ev_bandidos, ev_caravana,
-        ev_veio_ouro, ev_bezerros, ev_geada, ev_boa_safra
+        ev_veio_ouro, ev_bezerros, ev_geada, ev_boa_safra,
+        ev_mercenarios, ev_barbaros, ev_feras, ev_ratos
     };
     static int ultimo = -1;
     const int total = (int)(sizeof(pool) / sizeof(pool[0]));
