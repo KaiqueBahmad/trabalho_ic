@@ -100,7 +100,7 @@ void ui_opcoes_globais(void) {
         if (g_audio_ativado) {
             char fala[2200];
             snprintf(fala, sizeof(fala),
-                "%s Digite o número da ação ou o nome do comando. Você pode escrever sem acento.",
+                "%s Digite o número da ação.",
                 ultimas_opcoes_fala);
             tts_speak(fala);
         }
