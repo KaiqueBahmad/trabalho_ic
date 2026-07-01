@@ -24,7 +24,7 @@ void reino_inicializar(Reino *r, const char *nome) {
     r->ouro      = 150;
     r->imposto   = 15;
     r->clima     = 100;
-    r->soldados  = 0;
+    r->soldados  = 8;    /* uma pequena guarda ja serve ao reino desde o inicio */
     r->muralhas  = 0;
     r->fase_drakmar = 0;
     r->ameaca    = 0;

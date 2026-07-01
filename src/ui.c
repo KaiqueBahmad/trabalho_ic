@@ -96,8 +96,15 @@ void ui_ajuda(void) {
 void ui_opcoes_globais(void) {
     if (ultimas_opcoes_display[0] != '\0') {
         printf("\nOpções disponíveis:\n%s", ultimas_opcoes_display);
-        if (g_audio_ativado) tts_speak(ultimas_opcoes_fala);
+        printf("  (digite o número da ação ou o nome do comando — pode ser sem acento)\n");
+        if (g_audio_ativado) {
+            char fala[2200];
+            snprintf(fala, sizeof(fala),
+                "%s Digite o número da ação ou o nome do comando. Você pode escrever sem acento.",
+                ultimas_opcoes_fala);
+            tts_speak(fala);
+        }
     } else {
-        ui_msg("Use ajuda para ver os comandos disponíveis.");
+        ui_msg("Use ajuda para ver os comandos disponíveis. Você pode escrever os comandos sem acento.");
     }
 }

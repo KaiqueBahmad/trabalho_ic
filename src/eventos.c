@@ -542,20 +542,21 @@ void drakmar_inicio_de_ano(Reino *r) {
     if (r->jogo_encerrado) return;
 
     if (r->fase_drakmar == 0) {
-        if (r->ano >= 4) {
+        if (r->ano >= 2) {
             r->fase_drakmar = 1;
-            r->ameaca = 50;
+            r->ameaca = 45;
             ui_titulo("Rumores do Leste");
             ui_narrar("Mercadores trazem notícias sombrias: a leste, o reino de Drakmar arma seus "
                       "exércitos e olha com cobiça para as terras férteis de Avalon. Ainda é só um "
-                      "rumor, mas seria sábio começar a pensar na defesa do reino.");
+                      "rumor, mas seria sábio começar a pensar na defesa do reino desde já.");
             ui_msg("Novas ações surgem: recrutar soldados e reforçar as muralhas.");
         }
         return;
     }
 
-    /* fase >= 1: Drakmar cresce a cada ano (ritmo mais agressivo) */
-    r->ameaca += utils_rand(12, 18);
+    /* fase >= 1: Drakmar cresce a cada ano. Como a ameaca surge cedo, o reino tem
+       mais anos para se preparar — e Drakmar tambem tem mais tempo para crescer. */
+    r->ameaca += utils_rand(9, 14);
 
     if (r->fase_drakmar == 1 && r->ano >= 6) {
         r->fase_drakmar = 2;

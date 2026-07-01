@@ -13,11 +13,12 @@ Com a narração por voz ligada, aperte a tecla **ESC** a qualquer momento para 
 ## O que você administra
 
 - **População** — seus habitantes: mão de obra para a lavoura, base dos impostos e futuros soldados. Cresce com fartura; encolhe na fome ou com impostos altos.
-- **Comida (celeiro)** — cada inverno o povo (e os soldados) consome grãos. Se faltar, há **fome** e gente morre. Planejar a reserva é o coração do jogo.
+- **Comida (celeiro)** — cada inverno o povo (e os soldados) consome grãos. Se faltar, há **fome** e gente morre. Parte do que fica guardado ainda **estraga a cada ano**, então não adianta acumular sem fim: planejar a reserva é o coração do jogo.
 - **Gado** — o rebanho cresce sozinho a cada ano (limitado pelo pasto, que depende dos campos). Pode ser vendido por ouro ou abatido por comida: é sua poupança viva.
 - **Campos** — produzem grãos na colheita. Mais campos rendem mais comida e sustentam mais gado, mas precisam de gente para serem lavrados.
+- **Soldados** — você começa o reinado com uma pequena guarda. Em tempos de paz, pode **enviá-los à caça**: eles trazem carne para o celeiro, mas alguns podem não voltar da mata. Quando Drakmar ameaça, os mesmos soldados são a espinha da defesa. Recrutar mais tira gente da lavoura e mais bocas do celeiro no inverno.
 - **Ouro** — vem dos impostos e do comércio. Paga obras, gado e o exército.
-- **Imposto** — sua principal alavanca. Imposto baixo atrai moradores e faz o povo crescer; imposto alto enche o cofre, mas faz gente migrar para outras terras.
+- **Imposto** — sua principal alavanca. Em torno de **15 por cento** o reino fica equilibrado; abaixo disso atrai moradores e o povo cresce; acima disso enche o cofre, mas faz gente migrar para outras terras.
 
 ## Comandos a qualquer momento
 
@@ -35,7 +36,7 @@ Com a narração por voz ligada, aperte a tecla **ESC** a qualquer momento para 
 
 ## A ameaça de Drakmar
 
-Depois de alguns anos de reinado, mercadores trazem **rumores** de que Drakmar arma seus exércitos. A partir daí surgem novas ações: **recrutar soldados** (cada um sai da lavoura e come do celeiro) e **reforçar as muralhas**. Mais tarde, um **emissário** exige tributo. Você pode pagar (em ouro ou comida) para ganhar mais um ano de paz, submeter-se de vez, ou recusar e enfrentar Drakmar na guerra. A batalha compara a defesa de Avalon — soldados, muralhas, povo e reservas — contra a força inimiga, que só cresce com o tempo.
+Já nos primeiros anos de reinado, mercadores trazem **rumores** de que Drakmar arma seus exércitos. Você já governa uma pequena guarda desde o início (que pode recrutar ou mandar caçar a qualquer momento); com os rumores surge também a ação de **reforçar as muralhas**, e a partir daí os soldados passam a pesar na defesa. Mais tarde, um **emissário** exige tributo. Você pode pagar (em ouro ou comida) para ganhar mais um ano de paz, submeter-se de vez, ou recusar e enfrentar Drakmar na guerra. A batalha compara a defesa de Avalon — soldados, muralhas, povo e reservas — contra a força inimiga, que só cresce com o tempo.
 
 ## Dicas
 

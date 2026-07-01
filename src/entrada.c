@@ -56,7 +56,7 @@ int entrada_ler_linha(char *buf, int size) {
 
 void entrada_ler(char *buf, int size) {
     beep_suave();
-    printf("> ");
+    printf(" ");
     fflush(stdout);
     if (!entrada_ler_linha(buf, size)) {
         if (feof(stdin)) exit(0);

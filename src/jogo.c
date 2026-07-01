@@ -65,8 +65,9 @@ static void mostrar_relatorio(const Reino *r) {
     printf("  Ouro:       %d moedas no tesouro\n", r->ouro);
     printf("  Imposto:    %d por cento\n", r->imposto);
     printf("  Clima:      %s\n", clima_desc(r->clima));
+    printf("  Soldados:   %d\n", r->soldados);
     if (r->fase_drakmar >= 1) {
-        printf("  Soldados:   %d (muralhas nível %d)\n", r->soldados, r->muralhas);
+        printf("  Muralhas:   nível %d\n", r->muralhas);
         printf("  Ameaça de Drakmar: %s\n", drakmar_ameaca_desc(r));
     }
 
@@ -88,6 +89,8 @@ static void mostrar_relatorio(const Reino *r) {
             snprintf(mil, sizeof(mil),
                 "Soldados: %d. Muralhas nível %d. Ameaça de Drakmar: %s. ",
                 r->soldados, r->muralhas, drakmar_ameaca_desc(r));
+        else
+            snprintf(mil, sizeof(mil), "Soldados: %d. ", r->soldados);
         char resumo[760];
         snprintf(resumo, sizeof(resumo),
             "Ano %d de reinado, %s. "
@@ -229,7 +232,10 @@ static void acao_vender_comida(Reino *r) {
     ui_msg(buf);
 }
 
-/* ---- acoes militares (surgem com a ameaca de Drakmar) ---- */
+/* ---- acoes com soldados ----
+   A guarda existe desde o inicio do reinado: em tempos de paz, os soldados
+   cacam para encher o celeiro (com risco de vida); quando Drakmar ameaca,
+   somam-se as muralhas na defesa. */
 #define SOLDADO_CUSTO 5
 #define MURALHA_CUSTO 40
 #define MURALHA_MAX   5
@@ -254,6 +260,39 @@ static void acao_recrutar(Reino *r) {
     snprintf(buf, sizeof(buf), "Recrutados %d soldados. Exército: %d. População: %d. "
              "Lembre-se: soldados também comem do celeiro no inverno.", q, r->soldados, r->populacao);
     ui_msg(buf);
+}
+
+/* Envia parte da guarda para cacar: rende comida, mas as matas cobram um preco
+   em homens. É uma aposta — otima quando o celeiro aperta, arriscada quando se
+   guarda o exercito para a guerra. */
+static void acao_cacar(Reino *r) {
+    if (r->soldados <= 0) { ui_msg("Não há soldados para enviar à caça."); return; }
+    char buf[200];
+    snprintf(buf, sizeof(buf), "A caça nas florestas enche o celeiro, mas é perigosa: alguns "
+             "homens podem não voltar. Você tem %d soldados.", r->soldados);
+    ui_msg(buf);
+    int q = ler_quantidade("Quantos soldados enviar para caçar?");
+    if (q <= 0) { ui_msg("Nenhum caçador enviado."); return; }
+    if (q > r->soldados) q = r->soldados;
+
+    int ganho    = q * utils_rand(2, 6);          /* cada caçador traz alguma carne */
+    int perdidos = 0;
+    if (utils_chance(35))                          /* às vezes a caçada dá errado */
+        perdidos = utils_rand(1, q / 8 + 1);
+    if (perdidos > q) perdidos = q;
+
+    r->comida   += ganho;
+    r->soldados -= perdidos;
+
+    if (perdidos > 0)
+        snprintf(buf, sizeof(buf), "Os caçadores trazem %d medidas de carne, mas %d %s das matas. "
+                 "Celeiro: %d. Soldados: %d.", ganho,
+                 perdidos, perdidos == 1 ? "homem não voltou" : "homens não voltaram",
+                 r->comida, r->soldados);
+    else
+        snprintf(buf, sizeof(buf), "Caçada farta e sem baixas: %d medidas de carne enchem o "
+                 "celeiro. Celeiro: %d. Soldados: %d.", ganho, r->comida, r->soldados);
+    ui_narrar(buf);
 }
 
 static void acao_dispensar(Reino *r) {
@@ -299,11 +338,11 @@ static void mostrar_menu_acoes(void) {
     ui_opcao(6, "Comprar comida no mercado");
     ui_opcao(7, "Vender comida no mercado");
     ui_opcao(8, "Rever a situação do reino");
-    if (g_reino.fase_drakmar >= 1) {
-        ui_opcao(9, "Recrutar soldados");
-        ui_opcao(10, "Reforçar as muralhas");
-        ui_opcao(11, "Dispensar soldados");
-    }
+    ui_opcao(9, "Recrutar soldados");
+    ui_opcao(10, "Enviar soldados para caçar");
+    ui_opcao(11, "Dispensar soldados");
+    if (g_reino.fase_drakmar >= 1)
+        ui_opcao(12, "Reforçar as muralhas");
     ui_opcao(0, "Avançar para a próxima estação");
     ui_falar_opcoes();
 }
@@ -320,8 +359,11 @@ static void guia_topico(int t) {
         case 2:
             ui_titulo("Comida");
             ui_msg("Cada habitante e cada soldado consome 2 medidas de comida no inverno. "
-                   "Se o celeiro não bastar, há fome e parte do povo morre. No relatório, "
-                   "veja a frase 'o inverno exige' para saber quanto vai precisar.");
+                   "Se o celeiro não bastar, há fome e parte do povo morre. Parte do que fica "
+                   "guardado ainda estraga a cada ano, então não adianta acumular sem fim. "
+                   "Além da lavoura e do gado, você pode enviar soldados para caçar: eles trazem "
+                   "carne, mas alguns podem não voltar da mata. No relatório, veja a frase 'o "
+                   "inverno exige' para saber quanto vai precisar.");
             break;
         case 3:
             ui_titulo("Colheita");
@@ -348,11 +390,12 @@ static void guia_topico(int t) {
             break;
         case 7:
             ui_titulo("Drakmar");
-            ui_msg("Depois de alguns anos surgem rumores de guerra e, com eles, as ações de "
-                   "recrutar soldados e reforçar muralhas. Soldados também comem do celeiro "
-                   "no inverno. Mais tarde, um emissário exige tributo: você pode pagar para "
-                   "adiar, submeter-se, ou recusar e ir à guerra. Quanto mais cedo se "
-                   "preparar, mais forte estará na batalha final.");
+            ui_msg("Sua guarda existe desde o início e pode ser recrutada ou enviada à caça a "
+                   "qualquer momento. Logo nos primeiros anos surgem rumores de guerra e, com "
+                   "eles, a ação de reforçar as muralhas; a partir daí os soldados também pesam "
+                   "na defesa do reino. Soldados comem do celeiro no inverno. Mais tarde, um "
+                   "emissário exige tributo: você pode pagar para adiar, submeter-se, ou recusar "
+                   "e ir à guerra. Quanto mais cedo se preparar, mais forte estará na batalha final.");
             break;
         default:
             ui_erro("Tópico inválido.");
@@ -386,14 +429,19 @@ static void mostrar_guia(void) {
     }
 }
 
+/* Lista os comandos disponiveis a qualquer momento. */
+static void mostrar_ajuda(void) {
+    ui_msg("Comandos a qualquer momento: guia, que explica as regras do reino; "
+           "situação; opções; repetir; salvar; áudio; velocidade, que acelera a "
+           "narração; e sair. Digite o número da ação ou o nome dela — pode ser sem "
+           "acento (por exemplo, situacao ou opcoes). As ações de mercado pedem uma "
+           "quantidade em seguida. Com a narração ligada, aperte ESC para pular a fala atual.");
+}
+
 /* Retorna 1 se um comando global foi tratado. */
 static int processar_global(const char *cmd) {
     if (!strcmp(cmd, "ajuda")) {
-        ui_msg("Comandos a qualquer momento: guia, que explica as regras do reino; "
-               "situação; opções; repetir; salvar; áudio; velocidade, que acelera a "
-               "narração; e sair. Digite o número da ação ou o nome dela. As ações de "
-               "mercado pedem uma quantidade em seguida. Com a narração ligada, aperte "
-               "ESC para pular a fala atual.");
+        mostrar_ajuda();
         return 1;
     }
     if (!strcmp(cmd, "guia") || !strcmp(cmd, "manual") || !strcmp(cmd, "regras") || !strcmp(cmd, "dicas")) {
@@ -458,8 +506,12 @@ static void jogar_estacao(void) {
             case 7: acao_vender_comida(&g_reino); break;
             case 8: mostrar_relatorio(&g_reino); break;
             case 9: acao_recrutar(&g_reino); break;
-            case 10: acao_fortificar(&g_reino); break;
+            case 10: acao_cacar(&g_reino); break;
             case 11: acao_dispensar(&g_reino); break;
+            case 12:
+                if (g_reino.fase_drakmar >= 1) acao_fortificar(&g_reino);
+                else ui_erro("Ação inválida. Digite um número do menu ou 'opcoes' para ouvi-las de novo.");
+                break;
             case 0: {
                 int ano_antes = g_reino.ano;
                 reino_avancar_estacao(&g_reino);
@@ -546,8 +598,10 @@ static void novo_jogo(void) {
         "Vossa Majestade assume o trono de Avalon, um reino agrário de campos verdes e "
         "rebanhos fartos. Cabe ao rei zelar pelo povo: plantar, criar gado, encher o celeiro "
         "e governar com sabedoria estação após estação. Os anos de paz são seus para construir "
-        "um reino próspero. Que tipo de soberano você será?");
-    ui_msg("Dica: digite 'ajuda' a qualquer momento para ver os comandos.");
+        "um reino próspero — mas, a leste, cresce a sombra de Drakmar, e um dia seus exércitos "
+        "virão cobrar o seu preço. Como você governar nos anos bons decidirá se Avalon resiste. "
+        "Que tipo de soberano você será?");
+    mostrar_ajuda();
 
     while (!verificar_fim())
         jogar_estacao();
@@ -556,6 +610,7 @@ static void novo_jogo(void) {
 
 static void carregar_e_continuar(void) {
     if (carregar_reino(&g_reino)) {
+        mostrar_ajuda();
         while (!verificar_fim())
             jogar_estacao();
         mostrar_final(&g_reino);
